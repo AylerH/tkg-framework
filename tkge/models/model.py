@@ -143,7 +143,6 @@ class DeSimplEModel(BaseModel):
         for k, v in self.embedding.items():
             nn.init.xavier_uniform_(v.weight)
 
-
     def get_time_embedding(self, ent, year, month, day, ent_pos):
         # TODO: enum
         if ent_pos == "head":
@@ -288,7 +287,8 @@ class TComplExModel(BaseModel):
         return scores, factors
 
     def fit(self, samples: torch.Tensor):
-        self.config.assert_true(self.config.get("negative_sampling.type") == 'pseudo_sampling', "Use pseudo_sampling for tcomplex model.")
+        self.config.assert_true(self.config.get("negative_sampling.type") == 'pseudo_sampling',
+                                "Use pseudo_sampling for tcomplex model.")
 
         bs = samples.size(0)
         dim = samples.size(1)
@@ -374,7 +374,6 @@ class TNTComplExModel(BaseModel):
 
     @forward_checking
     def forward(self, x):
-
         lhs = self.embeddings[0](x[:, 0].long())
         rel = self.embeddings[1](x[:, 1].long())
         rel_no_time = self.embeddings[3](x[:, 1].long())
@@ -409,7 +408,8 @@ class TNTComplExModel(BaseModel):
         return scores, factors
 
     def fit(self, samples: torch.Tensor):
-        self.config.assert_true(self.config.get("negative_sampling.type") == 'pseudo_sampling', "Use pseudo_sampling for tntcomplex model.")
+        self.config.assert_true(self.config.get("negative_sampling.type") == 'pseudo_sampling',
+                                "Use pseudo_sampling for tntcomplex model.")
 
         bs = samples.size(0)
         dim = samples.size(1)
@@ -425,7 +425,7 @@ class TNTComplExModel(BaseModel):
 
         missing_head_ind = torch.isnan(x)[:, 0].byte().unsqueeze(1)
         reversed_x = x.clone()
-        reversed_x[:, 1] += 10      # dangerous
+        reversed_x[:, 1] += 10  # dangerous
         reversed_x[:, (0, 2)] = reversed_x[:, (2, 0)]
 
         x = torch.where(missing_head_ind,
@@ -523,14 +523,13 @@ class ATiSEModel(BaseModel):
         self.embedding['emb_TE'].weight.data.renorm_(p=2, dim=0, maxnorm=1)
         self.embedding['emb_TR'].weight.data.renorm_(p=2, dim=0, maxnorm=1)
 
-        print(sum(p.numel() for p in self.parameters() if p.requires_grad))
 
     @forward_checking
     def forward(self, sample: torch.Tensor):
-        bs = sample.size(0)
-        # TODO(gengyuan)
-        dim = sample.size(1) // (1 + self.config.get("negative_sampling.num_samples"))
-        sample = sample.view(-1, dim)
+        # bs = sample.size(0)
+        # # TODO(gengyuan)
+        # dim = sample.size(1) // (1 + self.config.get("negative_sampling.num_samples"))
+        # sample = sample.view(-1, dim)
 
         # TODO(gengyuan) type conversion when feeding the data instead of running the models
         h_i, t_i, r_i, d_i = sample[:, 0].long(), sample[:, 2].long(), sample[:, 1].long(), sample[:, 3]
@@ -565,8 +564,6 @@ class ATiSEModel(BaseModel):
                                                                  1) - self.emb_dim
         scores = (out1 + out2) / 4
 
-        scores = scores.view(bs, -1)
-
         factors = {
             "renorm": (self.embedding['emb_E'].weight,
                        self.embedding['emb_R'].weight,
@@ -580,10 +577,11 @@ class ATiSEModel(BaseModel):
 
     def fit(self, samples: torch.Tensor):
         bs = samples.size(0)
-        dim = samples.size(1)
+        dim = samples.size(1) // (1 + self.config.get("negative_sampling.num_samples"))
 
         samples = samples.view(-1, dim)
         scores, factors = self.forward(samples)
+
         scores = scores.view(bs, -1)
 
         return scores, factors
@@ -672,11 +670,17 @@ class TATransEModel(BaseModel):
         else:
             scores = torch.neg(torch.sum((h_e + rseq_e - t_e) ** 2, 1))
 
-        factors = {
-            "norm": (h_e,
-                     t_e,
-                     rseq_e)
-        }
+        # factors = {
+        #     "norm": (h_e,
+        #              t_e,
+        #              rseq_e)
+        # }
+
+        # factors = {"entity_reg": self.embedding['ent'],
+        #            "relation_reg": self.embedding['rel']
+        #            }
+
+        factors = None
 
         return scores, factors
 

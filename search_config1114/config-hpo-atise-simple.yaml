@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews11-14
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -34,7 +34,7 @@ dataset:
     gran: 3
   args: ~
 
-  name: 'icews14_atise'
+  name: 'icews11-14_atise'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -204,7 +204,7 @@ hpo:
   hyperparam:
     - name: model.embedding.global.dim
       type: choice
-      values: [1024, 512, 256, 128, 100, 64]
+      values: [512, 256, 128, 100, 64]
       value_type: int
     - name: train.optimizer.args.lr
       type: range

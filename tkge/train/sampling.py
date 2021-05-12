@@ -6,10 +6,10 @@ from tkge.common.registrable import Registrable
 from tkge.common.config import Config
 from tkge.common.error import ConfigurationError
 from tkge.data.dataset import DatasetProcessor
-from tkge.indexing import where_in
+# from tkge.indexing import where_in
 
 import torch
-import numba
+# import numba
 from abc import ABC, abstractmethod
 
 SLOTS = [0, 1, 2, 3]
@@ -414,6 +414,7 @@ class DepNegativeSampler(Registrable):
         raise NotImplementedError
 
     def _filter_and_resample(self, negative_samples: torch.Tensor, slot: int, positive_triples: torch.Tensor):
+        raise NotImplementedError
         """Filter and resample indices until only negatives have been created. """
         pair_str = ["po", "so", "sp"][slot]
         # holding the positive indices for the respective pair
@@ -471,6 +472,7 @@ class UniformNegativeSampler(DepNegativeSampler):
         return self._sample(torch.empty(1), slot, num_samples).view(-1)
 
     def _filter_and_resample_fast(self, negative_samples: torch.Tensor, slot: int, positive_triples: torch.Tensor):
+        raise NotImplementedError
         pair_str = ["po", "so", "sp"][slot]
         # holding the positive indices for the respective pair
         index = self.dataset.index(f"train_{pair_str}_to_{SLOT_STR[slot]}")
@@ -492,28 +494,28 @@ class UniformNegativeSampler(DepNegativeSampler):
         )
         return torch.tensor(negative_samples, dtype=torch.int64)
 
-    @numba.njit
-    def _filter_and_resample_numba(negative_samples, pairs, positives_index, batch_size, voc_size):
-        for i in range(batch_size):
-            positives = positives_index[(pairs[i][0], pairs[i][1])]
-            # inlining the where_in function here results in an internal numba
-            # error which asks to file a bug report
-            resample_idx = where_in(negative_samples[i], positives)
-            # number of new samples needed
-            num_new = len(resample_idx)
-            # number already found of the new samples needed
-            num_found = 0
-            num_remaining = num_new - num_found
-            while num_remaining:
-                new_samples = np.random.randint(0, voc_size, num_remaining)
-                idx = where_in(new_samples, positives, not_in=True)
-                # write the true negatives found
-                if len(idx):
-                    ctr = 0
-                    # numba does not support advanced indexing but the loop
-                    # is optimized so it's faster than numpy anyway
-                    for j in resample_idx[num_found: num_found + len(idx)]:
-                        negative_samples[i, j] = new_samples[ctr]
-                        ctr += 1
-                    num_found += len(idx)
-                    num_remaining = num_new - num_found
+    # @numba.njit
+    # def _filter_and_resample_numba(negative_samples, pairs, positives_index, batch_size, voc_size):
+    #     for i in range(batch_size):
+    #         positives = positives_index[(pairs[i][0], pairs[i][1])]
+    #         # inlining the where_in function here results in an internal numba
+    #         # error which asks to file a bug report
+    #         resample_idx = where_in(negative_samples[i], positives)
+    #         # number of new samples needed
+    #         num_new = len(resample_idx)
+    #         # number already found of the new samples needed
+    #         num_found = 0
+    #         num_remaining = num_new - num_found
+    #         while num_remaining:
+    #             new_samples = np.random.randint(0, voc_size, num_remaining)
+    #             idx = where_in(new_samples, positives, not_in=True)
+    #             # write the true negatives found
+    #             if len(idx):
+    #                 ctr = 0
+    #                 # numba does not support advanced indexing but the loop
+    #                 # is optimized so it's faster than numpy anyway
+    #                 for j in resample_idx[num_found: num_found + len(idx)]:
+    #                     negative_samples[i, j] = new_samples[ctr]
+    #                     ctr += 1
+    #                 num_found += len(idx)
+    #                 num_remaining = num_new - num_found

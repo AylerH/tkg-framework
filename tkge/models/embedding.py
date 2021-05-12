@@ -96,7 +96,6 @@ class EntityEmbedding(BaseEmbedding):
             return {k: v(index) for k, v in self._tail.items()}
 
 
-
 class RelationEmbedding(BaseEmbedding):
     def __init__(self, config: Config, dataset: DatasetProcessor):
         super(RelationEmbedding, self).__init__(config=config, dataset=dataset)
@@ -120,14 +119,12 @@ class RelationEmbedding(BaseEmbedding):
         num_emb = num_emb * 2 if self.config.get("model.scorer.inverse") or self.config.get(
             "task.reciprocal_training") else num_emb
 
-
         for k in self.config.get('model.embedding.relation.keys'):
             embedding_dim = self.config.get(f"model.embedding.relation.keys.{k}.dim") if self.config.get(
                 f"model.embedding.global.dim") == -1 else self.config.get(f"model.embedding.global.dim")
             init_method = self.config.get(
                 self.config.get(f"model.embedding.relation.keys.{k}.init")) if not self.config.get(
                 f"model.embedding.global.init") else self.config.get(f"model.embedding.global.init")
-
 
             self._relation[k] = nn.Embedding(num_embeddings=num_emb,
                                              embedding_dim=embedding_dim)
@@ -164,7 +161,6 @@ class TemporalEmbedding(BaseEmbedding):
                 self.config.get(f"model.embedding.temporal.keys.{k}.init")) if not self.config.get(
                 f"model.embedding.global.init") else self.config.get(f"model.embedding.global.init")
 
-
             self._temporal[k] = nn.Embedding(num_embeddings=self.dataset.num_time_identifier(),
                                              embedding_dim=embedding_dim)
             self.initialize(init_method)(self._temporal[k].weight)
@@ -187,7 +183,7 @@ class FunctionalTemporalEmbedding(BaseEmbedding):
         t_min = self.config.get("model.embedding.global.t_min")
         t_max = self.config.get("model.embedding.global.t_max")
 
-        self.freq = nn.Parameter(data=torch.zeros([1, dim//2]), requires_grad=True)
+        self.freq = nn.Parameter(data=torch.zeros([1, dim // 2]), requires_grad=True)
         torch.nn.init.uniform_(self.freq.data, a=t_min, b=t_max)
 
     def __call__(self, timestamps: torch.Tensor):
@@ -200,6 +196,7 @@ class FunctionalTemporalEmbedding(BaseEmbedding):
         feat = torch.cat((sin_feat, cos_feat), dim=1)
 
         return {'real': feat}
+
 
 class ExtendedBochnerTemporalEmbedding(BaseEmbedding):
     def __init__(self, config: Config, dataset: DatasetProcessor):
@@ -225,6 +222,41 @@ class ExtendedBochnerTemporalEmbedding(BaseEmbedding):
         feat = self.amps * torch.sin(timestamps * omega + self.phas)
         # cos_feat = self.amps * torch.cos(timestamps * omega + self.phas)
         # feat = torch.cat((sin_feat, cos_feat), dim=1)
+
+        return {'real': feat}
+
+
+class CompositeBochnerTemporalEmbedding(BaseEmbedding):
+    def __init__(self, config: Config, dataset: DatasetProcessor):
+        super(CompositeBochnerTemporalEmbedding, self).__init__(config=config, dataset=dataset)
+
+        dim = self.config.get("model.embedding.global.dim")
+        init_type = self.config.get("model.embedding.global.init")
+        t_min = self.config.get("model.embedding.global.t_min")
+        t_max = self.config.get("model.embedding.global.t_max")
+        se = self.config.get("model.embedding.global.se")
+
+        se_dim = int(se * dim)
+        de_dim = dim - se_dim
+
+        self.se_part = nn.Parameter(data=torch.zeros([1, se_dim]), requires_grad=True)
+        self.de_freq = nn.Parameter(data=torch.zeros([1, de_dim]), requires_grad=True)
+        self.de_amps = nn.Parameter(data=torch.zeros([1, de_dim]), requires_grad=True)
+        self.de_phas = nn.Parameter(data=torch.zeros([1, de_dim]), requires_grad=True)
+
+        torch.nn.init.uniform_(self.se_part.data, a=t_min, b=t_max)
+        torch.nn.init.uniform_(self.de_freq.data, a=t_min, b=t_max)
+        torch.nn.init.xavier_uniform_(self.de_amps.data)
+        torch.nn.init.uniform_(self.de_phas.data, a=0, b=t_max)
+
+    def __call__(self, timestamps: torch.Tensor):
+        timestamps = timestamps.squeeze().unsqueeze(-1)
+        assert timestamps.dim() == 2 and timestamps.size(1) == 1, f"timestamp {timestamps.size()}"
+
+        omega = 1 / self.de_freq
+        feat = self.de_amps * torch.sin(timestamps * omega + self.de_phas)
+        bs = timestamps.shape[0]
+        feat = torch.cat((self.se_part.repeat((bs, 1)), feat), dim=1)
 
         return {'real': feat}
 # class EntityEmbedding(BaseEmbedding):

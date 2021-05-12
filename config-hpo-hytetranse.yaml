@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /Users/GengyuanMax/workspace/tkg-framework/data/icews14
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache

@@ -20,7 +20,7 @@ random_seed:
 
 dataset:
   # data folder includes train, val, test files
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/yago189
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_ding
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -32,7 +32,7 @@ dataset:
     float: False
   args: ~
 
-  name: 'yago189'
+  name: 'gdelt_ding'
 
   # Number of entities. If set to -1, automatically determined from the
   # entity_ids file (see below).
@@ -107,7 +107,7 @@ train:
   # If set and a batch runs out of memory, repeatedly half the subbatch size
   # until the batch succeeds. The reduced subbatch size will be used for all
   # future batches.
-  subbatch_adaptive: False
+  subbatch_adaptive: True
 
   # Number of workers used to construct batches. Leave at 0 for default (no
   # separate workers). On Windows, only 0 is supported.

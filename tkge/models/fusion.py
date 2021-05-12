@@ -264,8 +264,8 @@ class TimeAwareFusion(HiddenRepresentationCombination):
     def __init__(self, config: Config):
         super(TimeAwareFusion, self).__init__(config=config)
 
-        self.emb_dim = self.config.get("model.fusion.emb_dim")
-        self.l1_flag = self.config.get("model.fusion.l1_flag")
+        self.emb_dim = self.config.get("model.embedding.global.dim")
+        self.l1_flag = True #self.config.get("model.fusion.l1_flag")
         self.p = self.config.get("model.fusion.p")
 
         self.dropout = torch.nn.Dropout(p=self.p)
