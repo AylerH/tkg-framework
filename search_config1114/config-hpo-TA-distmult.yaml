@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews11-14
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -29,11 +29,11 @@ dataset:
   filter: False
   temporal:
     resolution: "day"
-    index: True
-    float: False
+    index: False
+    float: True
   args: ~
 
-  name: 'icews14'
+  name: 'icews14_TA'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,45 +48,12 @@ negative_sampling:
 
 
 model:
-  type: translation_transe_model
+  type: ta_distmult
 
-  embedding:
-    global:
-      dim: 128
-      init: xavier_uniform
+  emb_dim: 64
+  l1_flag: True
 
-    entity:
-      pos_aware: True
-      keys:
-        real:
-          dim: 160
-          init: xavier_uniform
-    relation:
-      keys:
-        real:
-          dim: 160
-          init: xavier_uniform
-    temporal:
-      keys:
-        real:
-          dim: 160
-          init: xavier_uniform
-  fusion:
-    type: reproject_fusion
-    target:
-      - 'rel+temp'
-      - 'ent+temp'
-    p: 0.4
-    args: ~
-  transformation:
-    type: translation_tf
-    gamma: 100
-    p: 1
-    range: 10
-    args: ~
-  scorer:
-    inverse: True
-
+  p: 0.4
   args: ~
 
 
@@ -129,7 +96,7 @@ train:
   optimizer:
     type: Adam
     args:
-      lr: 0.01
+      lr: 0.00113831256758030
 
     default:
       type: Adam           # sgd, adagrad, adam
@@ -137,20 +104,14 @@ train:
       args:
         +++: +++
 
-  regularizer:
-    entity_reg:
-      type: none_regularize
-      weight: 0.0
+  regularizer: ~
+  inplace_regularizer:
+    norm:
+      type: inplace_renorm_regularize
+      p: 2
+      dim: 1
+      maxnorm: 1
       args: ~
-    relation_reg:
-      type: none_regularize
-      weight: 0.0
-      args: ~
-    temporal_reg:
-      type: n3_regularize
-      weight: 0.01
-      args: ~
-  inplace_regularizer: ~
 
   lr_scheduler: ""
 
@@ -176,17 +137,17 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 80
-  num_random_trials: 30
+  num_trials: 60
+  num_random_trials: 20
   hyperparam:
-    - name: model.embedding.global.dim
+    - name: model.emb_dim
       type: choice
-      values: [1024, 512, 256, 128, 100, 64]
+      values: [128, 100, 64]
       value_type: int
-    - name: train.regularizer.temporal_reg.weight
-      type: range
-      bounds: [0.0, 0.1]
-      value_type: float
+#    - name: train.regularizer.temporal_reg.weight
+#      type: range
+#      bounds: [0.0, 0.1]
+#      value_type: float
     - name: train.optimizer.args.lr
       type: range
       bounds: [0.0000001, 0.01]
@@ -195,39 +156,35 @@ hpo:
       type: choice
       values: [0.0, 0.2, 0.4, 0.5, 0.6]
       value_type: float
-#    - name: task.reciprocal_training
-#      type: choice
-#      values: [true, false]
-#      value_type: bool
+    - name: task.reciprocal_training
+      type: choice
+      values: [true, false]
+      value_type: bool
     - name: train.loss.type
       type: choice
       values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
       value_type: str
-    - name: model.embedding.entity.pos_aware
-      type: choice
-      values: [True, False]
-      value_type: bool
 
     # phase2
 #    - name: model.embedding.global.init
 #      type: choice
 #      values: ['xavier_uniform', 'xavier_normal']
 #      value_type: str
-    - name: train.regularizer.entity_reg.type
-      type: choice
-      values: ['f2_regularize', 'lambda3_regularize']
-      value_type: str
-    - name: train.regularizer.entity_reg.weight
-      type: range
-      bounds: [0.0, 0.1]
-      value_type: float
-    - name: train.regularizer.relation_reg.type
-      type: choice
-      values: ['f2_regularize', 'lambda3_regularize']
-      value_type: str
-    - name: train.regularizer.relation_reg.weight
-      type: range
-      bounds: [0.0, 0.1]
-      value_type: float
+#    - name: train.regularizer.entity_reg.type
+#      type: choice
+#      values: ['f2_regularize', 'lambda3_regularize']
+#      value_type: str
+#    - name: train.regularizer.entity_reg.weight
+#      type: range
+#      bounds: [0.0, 0.1]
+#      value_type: float
+#    - name: train.regularizer.relation_reg.type
+#      type: choice
+#      values: ['f2_regularize', 'lambda3_regularize']
+#      value_type: str
+#    - name: train.regularizer.relation_reg.weight
+#      type: range
+#      bounds: [0.0, 0.1]
+#      value_type: float
 
 

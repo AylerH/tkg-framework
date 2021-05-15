@@ -68,7 +68,7 @@ train:
     temp: 0.5
     args: ~
 
-  max_epochs: 500
+  max_epochs: 5000
 
   loader:
     num_workers: 0
@@ -87,7 +87,7 @@ train:
 
     early_stopping:
       early_stop: True
-      patience: 30
+      patience: 100
       epochs: 50
       metric_thresh: 0.2
 
@@ -151,8 +151,8 @@ hpo:
       values: [512, 128, 256, 1024]
       value_type: int
     - name: train.optimizer.args.lr
-      type: range
-      bounds: [0.0000001, 0.01]
+      type: choice
+      values: [0.00003, 0.0003, 0.003, 0.03]
       value_type: float
     - name: task.reciprocal_training
       type: choice
@@ -160,7 +160,7 @@ hpo:
       value_type: bool
     - name: train.loss.type
       type: choice
-      values: ['binary_cross_entropy_loss', 'cross_entropy_loss', 'log_rank_loss']
+      values: ['cross_entropy_loss', 'log_rank_loss']
       value_type: str
 
 

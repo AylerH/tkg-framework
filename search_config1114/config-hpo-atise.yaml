@@ -21,36 +21,37 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews11-14
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
   mapping: False
   filter: False
   temporal:
-    resolution: "day"
-    index: True
-    float: False
+    resolution: "day"  #deprecated
+    index: False
+    float: True
+    gran: 3
   args: ~
 
-  name: 'icews14'
+  name: 'icews11-14_atise'
   num_entities: -1
   num_relations: -1
   pickle: True
 
 negative_sampling:
-  type: 'pseudo_sampling'
-  num_samples: -1 # should has no effect
+  type: 'time_agnostic'
+  num_samples: 10
   filter: False
   as_matrix: True
-  target: tail
+  target: both
   args: ~
 
 model:
-  type: 'tntcomplex'
-  rank: 1600
-  no_time_emb: False
-  init_size: 0.01
+  type: 'atise'
+  embedding_dim: 500
+  cmin: 0.003
+  cmax: 0.3
   args: ~
 
 
@@ -62,10 +63,12 @@ train:
   type: negative_sampling
 
   loss:
-    type: cross_entropy_loss
+    type: log_rank_loss
+    gamma: 120
+    temp: 0.5
     args: ~
 
-  max_epochs: 50
+  max_epochs: 500
 
   loader:
     num_workers: 0
@@ -84,34 +87,37 @@ train:
 
     early_stopping:
       early_stop: True
-      patience: 30
+      patience: 100
       epochs: 50
       metric_thresh: 0.2
 
-  batch_size: 1000
+  batch_size: 512
   subbatch_size: -1
   subbatch_adaptive: True
   optimizer:
-    type: Adagrad
+    type: Adam
     args:
-      lr: 0.1
+      lr: 0.00003
 
     default:
-      type: Adagrad           # sgd, adagrad, adam
+      type: Adam
 
       args:
         +++: +++
 
-  regularizer:
-    n3:
-      type: n3_regularize
-      weight: 0.01
+  regularizer: ~
+  inplace_regularizer:
+    renorm:
+      type: inplace_renorm_regularize
+      p: 2
+      dim: 0
+      maxnorm: 1
       args: ~
-    lambda3:
-      type: lambda3_regularize
-      weight: 0.01
+    clamp:
+      type: inplace_clamp_regularize
+      min: 0.003
+      max: 0.3
       args: ~
-  inplace_regularizer: ~
 
   lr_scheduler: ""
 
@@ -121,7 +127,7 @@ train:
   trace_level: epoch           # batch, epoch
 
   checkpoint:
-    every: 100
+    every: 1000
     keep: 3
 
   auto_correct: False
@@ -130,24 +136,28 @@ train:
 
 eval:
   filter: time-aware
-  ordering: descending
+  ordering: ascending
   preference: optimistic
   k: [1,3,10]
 
 
 hpo:
   num_workers: -1
-  num_trials: 80
-  num_random_trials: 30
+  num_trials: 40
+  num_random_trials: 20
   hyperparam:
-    - name: model.rank
+    - name: model.embedding_dim
       type: choice
-      values: [1560, 780, 156]
+      values: [512, 128, 256, 1024]
       value_type: int
     - name: train.optimizer.args.lr
       type: range
-      bounds: [0.05, 0.15]
+      bounds: [0.0000001, 0.001]
       value_type: float
+    - name: train.loss.type
+      type: choice
+      values: [cross_entropy_loss', 'log_rank_loss']
+      value_type: str
 
 
     # phase2
@@ -155,13 +165,14 @@ hpo:
 #      type: choice
 #      values: ['xavier_uniform', 'xavier_normal']
 #      value_type: str
-    - name: train.regularizer.n3.weight
-      type: choice
-      values: [0.01, 0.1, 0.001]
-      value_type: float
-    - name: train.regularizer.lambda3.weight
-      type: choice
-      values: [0.1, 1, 0.5]
-      value_type: float
+#    - name: train.n3.weight
+#      type: range
+#      bounds: [0.0, 0.1]
+#      value_type: float
+#    - name: train.lambda3.weight
+#      type: range
+#      bounds: [0.0, 0.1]
+#      value_type: float
+
 
 

@@ -425,7 +425,7 @@ class TNTComplExModel(BaseModel):
 
         missing_head_ind = torch.isnan(x)[:, 0].byte().unsqueeze(1)
         reversed_x = x.clone()
-        reversed_x[:, 1] += 10  # dangerous
+        reversed_x[:, 1] += 1  # dangerous
         reversed_x[:, (0, 2)] = reversed_x[:, (2, 0)]
 
         x = torch.where(missing_head_ind,
@@ -634,7 +634,6 @@ class TATransEModel(BaseModel):
             emb.weight.data.renorm(p=2, dim=1, maxnorm=1)
 
     def get_rseq(self, rel: torch.LongTensor, tem: torch.LongTensor):
-
         r_e = self.embedding['rel'](rel)
         r_e = r_e.unsqueeze(0).transpose(0, 1)
 
@@ -655,6 +654,7 @@ class TATransEModel(BaseModel):
 
     @forward_checking
     def forward(self, samples: torch.Tensor):
+        torch.cuda.empty_cache()
         h, r, t, tem = samples[:, 0].long(), samples[:, 1].long(), samples[:, 2].long(), samples[:, 3:].long()
 
         h_e = self.embedding['ent'](h)
@@ -744,6 +744,7 @@ class TADistmultModel(BaseModel):
 
     @forward_checking
     def forward(self, samples: torch.Tensor):
+        torch.cuda.empty_cache()
         h, r, t, tem = samples[:, 0].long(), samples[:, 1].long(), samples[:, 2].long(), samples[:, 3:].long()
 
         h_e = self.embedding['ent'](h)

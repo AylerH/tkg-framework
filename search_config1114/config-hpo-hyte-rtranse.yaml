@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews11-14
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: False
   args: ~
 
-  name: 'icews14'
+  name: 'icews11-14'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,7 +48,7 @@ negative_sampling:
 
 
 model:
-  type: pipeline_model
+  type: translation_transe_model
 
   embedding:
     global:
@@ -176,8 +176,8 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 60
-  num_random_trials: 20
+  num_trials: 80
+  num_random_trials: 30
   hyperparam:
     - name: model.embedding.global.dim
       type: choice
@@ -195,35 +195,39 @@ hpo:
       type: choice
       values: [0.0, 0.2, 0.4, 0.5, 0.6]
       value_type: float
-    - name: task.reciprocal_training
-      type: choice
-      values: [true, false]
-      value_type: bool
+#    - name: task.reciprocal_training
+#      type: choice
+#      values: [true, false]
+#      value_type: bool
     - name: train.loss.type
       type: choice
       values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
       value_type: str
+    - name: model.embedding.entity.pos_aware
+      type: choice
+      values: [True, False]
+      value_type: bool
 
     # phase2
 #    - name: model.embedding.global.init
 #      type: choice
 #      values: ['xavier_uniform', 'xavier_normal']
 #      value_type: str
-#    - name: train.regularizer.entity_reg.type
-#      type: choice
-#      values: ['f2_regularize', 'lambda3_regularize']
-#      value_type: str
-#    - name: train.regularizer.entity_reg.weight
-#      type: range
-#      bounds: [0.0, 0.1]
-#      value_type: float
-#    - name: train.regularizer.relation_reg.type
-#      type: choice
-#      values: ['f2_regularize', 'lambda3_regularize']
-#      value_type: str
-#    - name: train.regularizer.relation_reg.weight
-#      type: range
-#      bounds: [0.0, 0.1]
-#      value_type: float
+    - name: train.regularizer.entity_reg.type
+      type: choice
+      values: ['f2_regularize', 'lambda3_regularize']
+      value_type: str
+    - name: train.regularizer.entity_reg.weight
+      type: range
+      bounds: [0.0, 0.1]
+      value_type: float
+    - name: train.regularizer.relation_reg.type
+      type: choice
+      values: ['f2_regularize', 'lambda3_regularize']
+      value_type: str
+    - name: train.regularizer.relation_reg.weight
+      type: range
+      bounds: [0.0, 0.1]
+      value_type: float
 
 

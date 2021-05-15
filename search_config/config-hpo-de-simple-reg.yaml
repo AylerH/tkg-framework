@@ -248,7 +248,7 @@ hpo:
       value_type: str
     - name: train.regularizer.dynamic_entity_reg.weight
       type: range
-      bounds: [0.0, 0.1]
+      bounds: [0.0, 0.001]
       value_type: float
     - name: train.regularizer.static_entity_reg.type
       type: choice
@@ -256,7 +256,7 @@ hpo:
       value_type: str
     - name: train.regularizer.static_entity_reg.weight
       type: range
-      bounds: [0.0, 0.1]
+      bounds: [0.0, 0.001]
       value_type: float
     - name: train.regularizer.relation_reg.type
       type: choice
