@@ -94,10 +94,10 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         year2id = dict()
         freq = defaultdict(int)
         year_list = []
-        for k, v in triple_time.items():  # v:[start_year,end_year:str]
+        for k, v in triple_time.items():  # v:[start_year:str,end_year:str]
             try:
                 start = v[0].split('-')[0]
-                end = v[1].split('-')[0]  # _year
+                end = v[1].split('-')[0]
             except:
                 pdb.set_trace()  # 程序暂停
 
@@ -116,18 +116,18 @@ class DatasetProcessor(ABC, Registrable, Configurable):
             if count > 300:
                 year_class.append(key)  # 如果出现频率大于300次（start或者end都可以）
                 count = 0
-        prev_year = 0
+        prev_year = '0'
         i = 0
         for i, yr in enumerate(year_class):
             year2id[(prev_year, yr)] = i  # { (0,yr[0]):0,(yr[0]+1,yr[1]):1,...,(yr[-1]+1,max_year):N}
-            prev_year = yr + 1
+            prev_year = str(int(yr) + 1)
         year2id[(prev_year, max(year_list))] = i + 1
 
         return year2id
 
     def create_id_labels(self, triple_time):
-        YEARMAX = 3000
-        YEARMIN = -50
+        YEARMAX = '3000'
+        YEARMIN = '-50'
 
         inp_idx, start_idx, end_idx = [], [], []
         for k, v in triple_time.items():
@@ -137,17 +137,13 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                 start = YEARMIN
             elif start.find('#') != -1 or len(start) != 4:  # 如果字符串内包含#或者年份的长度不等于4，跳出本次循环
                 continue
-
             if end == '####':
                 end = YEARMAX
             elif end.find('#') != -1 or len(end) != 4:
                 continue
-
-            start = int(start)
-            end = int(end)
-
             if start > end:
                 end = YEARMAX
+
             inp_idx.append(k)
             if start == YEARMIN:
                 start_idx.append(0)
@@ -155,7 +151,6 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                 for key, lbl in sorted(self.year2id.items(), key=lambda x: x[1]):
                     if start >= key[0] and start <= key[1]:
                         start_idx.append(lbl)
-
             if end == YEARMAX:
                 end_idx.append(len(self.year2id.keys()) - 1)
             else:
@@ -165,7 +160,7 @@ class DatasetProcessor(ABC, Registrable, Configurable):
 
         return inp_idx, start_idx, end_idx
 
-    def get_raw_data(self, triple_time, triples):
+    def get_pretreated_data(self, triple_time, triples):
         inp_idx, start_idx, end_idx = self.create_id_labels(triple_time)
         keep_idx = set(inp_idx)
         for i in range(len(triples) - 1, -1, -1):
@@ -187,11 +182,11 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                     rel.append(rela[i])
                     tail.append(post[i])
                     start_idx.append(j)
-        raw_data = []
+        pretreated_data = []
         for i in range(len(head)):
-            raw_data.append([head[i], rel[i], tail[i], start_idx[i]])
+            pretreated_data.append([head[i], rel[i], tail[i], start_idx[i]])
 
-        return  raw_data
+        return pretreated_data
 
     def load(self):
         train_file = self.folder + "/train.txt"
@@ -199,23 +194,6 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         test_file = self.folder + "/test.txt"
 
         if self.name == 'wiki' or self.name == 'yago11k':
-            # triple2id_file = self.folder + "/triple2id.txt"
-            # relation2id_file = self.folder + "/relation2id.txt"
-            # entity2id_file = self.folder + "/entity2id.txt"
-            # max_ent, max_rel = 0, 0
-
-            # triple_set = []
-            # with open(triple2id_file, 'r') as filein:
-            #     for line in filein:
-            #         tup = (line.split()[0].strip(), line.split()[1].strip(), line.split()[2].strip())
-            #         triple_set.append(tup)
-            # triple_set = set(triple_set)
-            # with open(entity2id_file, 'r', encoding="utf-8") as filein2:
-            #     for _ in filein2:
-            #         max_ent = max_ent + 1
-            # with open(relation2id_file, 'r') as filein3:
-            #     for _ in filein3:
-            #         max_rel = max_rel + 1
             train_triples, valid_triples, test_triples = [], [], []
             train_triple_time, valid_triple_time, test_triple_time = dict(), dict(), dict()
             with open(train_file, 'r') as filein:
@@ -225,7 +203,7 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                     train_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
                     count += 1
             self.year2id = self.create_year2id(train_triple_time)
-            self.train_raw = self.get_raw_data(train_triple_time)
+            self.train_raw = self.get_pretreated_data(train_triple_time,train_triples)
             self.train_size = len(self.train_raw)
 
             with open(valid_file, 'r') as filein:
@@ -234,7 +212,7 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                     valid_triples.append([x.strip() for x in line.split()[0:3]])
                     valid_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
                     count += 1
-            self.valid_raw = self.get_raw_data(valid_triple_time)
+            self.valid_raw = self.get_pretreated_data(valid_triple_time,valid_triples)
             self.valid_size = len(self.valid_raw)
 
             with open(test_file, 'r') as filein:
@@ -243,8 +221,9 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                     test_triples.append([x.strip() for x in line.split()[0:3]])
                     test_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
                     count += 1
-            self.test_raw = self.get_raw_data(test_triple_time)
+            self.test_raw = self.get_pretreated_data(test_triple_time,test_triples)
             self.test_size = len(self.test_raw)
+            self.max_year = len(self.year2id)
 
         else:
             with open(train_file, "r") as f:
@@ -289,9 +268,13 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         return len(self.rel2id)
 
     def num_timestamps(self):
+        if self.name == 'wiki' or self.name == 'yago11k':
+            return self.max_year
         return len(self.ts2id)
 
     def num_time_identifier(self):
+        if self.name == 'wiki' or self.name == 'yago11k':
+            return self.max_year
         return len(self.ts2id)
 
     def filter(self, type="static", target="o") -> Dict[str, List]:
@@ -578,42 +561,42 @@ class WIKIDatasetProcessor(DatasetProcessor):
     def process(self):
         for rd in self.train_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts])
-            self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
 
         for rd in self.valid_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.valid_set['triple'].append([head, rel, tail])
             self.valid_set['timestamp_id'].append([ts])
-            self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
 
         for rd in self.test_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.test_set['triple'].append([head, rel, tail])
             self.test_set['timestamp_id'].append([ts])
-            self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
@@ -630,42 +613,42 @@ class YAGODatasetProcessor(DatasetProcessor):
     def process(self):
         for rd in self.train_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts])
-            self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
 
         for rd in self.valid_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.valid_set['triple'].append([head, rel, tail])
             self.valid_set['timestamp_id'].append([ts])
-            self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
 
         for rd in self.test_raw:
             head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
             ts = int(ts)
 
             self.test_set['triple'].append([head, rel, tail])
             self.test_set['timestamp_id'].append([ts])
-            self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            # self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts])
