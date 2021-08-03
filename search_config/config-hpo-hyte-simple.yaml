@@ -9,7 +9,7 @@ task:
   folder: /home/ubuntu/gengyuan/search_experiments
   type: train
   device: 'cuda'
-  reciprocal_training: true
+  reciprocal_training: false
 
 random_seed:
   default: -1
@@ -52,7 +52,7 @@ model:
 
   embedding:
     global:
-      dim: 128
+      dim: 256
       init: xavier_uniform
 
     entity:
@@ -76,7 +76,7 @@ model:
     target:
       - 'rel+temp'
       - 'ent+temp'
-    p: 0.4
+    p: 0.2
     args: ~
   transformation:
     type: distmult_tf
@@ -129,7 +129,7 @@ train:
   optimizer:
     type: Adam
     args:
-      lr: 0.01
+      lr: 0.00894714553379621
 
     default:
       type: Adam           # sgd, adagrad, adam
@@ -148,7 +148,7 @@ train:
       args: ~
     temporal_reg:
       type: n3_regularize
-      weight: 0.01
+      weight: 0.03156730886548
       args: ~
   inplace_regularizer: ~
 

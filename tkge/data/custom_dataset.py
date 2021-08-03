@@ -74,6 +74,7 @@ class ICEWS14AtiseDatasetProcessor(DatasetProcessor):
 
         return day
 
+
 @DatasetProcessor.register(name="icews11-14_atise")
 class ICEWS1114AtiseDatasetProcessor(DatasetProcessor):
     def process(self):
@@ -127,6 +128,65 @@ class ICEWS1114AtiseDatasetProcessor(DatasetProcessor):
         self.gran = self.config.get("dataset.temporal.gran")
 
         start_sec = time.mktime(time.strptime('2011-01-01', '%Y-%m-%d'))
+
+        end_sec = time.mktime(time.strptime(origin, '%Y-%m-%d'))
+        day = int((end_sec - start_sec) / (self.gran * 24 * 60 * 60))
+
+        return day
+
+@DatasetProcessor.register(name="gdelt-m10-atise")
+class GDELTM10AtiseDatasetProcessor(DatasetProcessor):
+    def process(self):
+        for rd in self.train_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            self.train_set['triple'].append([head, rel, tail])
+            self.train_set['timestamp_id'].append([ts_id])
+            self.train_set['timestamp_float'].append([ts])
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.valid_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            self.valid_set['triple'].append([head, rel, tail])
+            self.valid_set['timestamp_id'].append([ts_id])
+            self.valid_set['timestamp_float'].append([ts])
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.test_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            self.test_set['triple'].append([head, rel, tail])
+            self.test_set['timestamp_id'].append([ts_id])
+            self.test_set['timestamp_float'].append([ts])
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts_id])
+
+    def process_time(self, origin: str):
+        # TODO (gengyuan) move to init method
+        self.gran = self.config.get("dataset.temporal.gran")
+
+        start_sec = time.mktime(time.strptime('2015-10-01', '%Y-%m-%d'))
 
         end_sec = time.mktime(time.strptime(origin, '%Y-%m-%d'))
         day = int((end_sec - start_sec) / (self.gran * 24 * 60 * 60))
@@ -221,8 +281,6 @@ class ICEWS14TADatasetProcessor(DatasetProcessor):
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts_id])
 
-
-
     def process_time(self, origin: str):
         ts = []
         year, month, day = origin.split('-')
@@ -285,8 +343,6 @@ class TestICEWS14DatasetProcessor(DatasetProcessor):
         train_file = self.folder + "/train.txt"
         valid_file = self.folder + "/valid.txt"
         test_file = self.folder + "/test.txt"
-
-        print('ygygyg')
 
         with open(train_file, "r") as f:
             if self.reciprocal_training:
@@ -387,7 +443,6 @@ class YAGO1830DatasetProcessor(DatasetProcessor):
     def __init__(self, config: Config):
         super().__init__(config)
 
-
         self.folder = self.config.get("dataset.folder")
         self.level = self.config.get("dataset.temporal.resolution")
         self.index = self.config.get("dataset.temporal.index")
@@ -399,7 +454,6 @@ class YAGO1830DatasetProcessor(DatasetProcessor):
         self.train_raw: List[str] = []
         self.valid_raw: List[str] = []
         self.test_raw: List[str] = []
-
 
         self.train_set = defaultdict(list)
         self.valid_set = defaultdict(list)
@@ -427,7 +481,7 @@ class YAGO1830DatasetProcessor(DatasetProcessor):
                     # for line in lines:
 
                     insert_line = line.split('\t')
-                    insert_line[1] = str(int(insert_line[1]) + 10)
+                    insert_line[1] = str(int(insert_line[1]) + 1)
                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
                     insert_line = '\t'.join(insert_line)
 
@@ -495,7 +549,6 @@ class YAGO1830DatasetProcessor(DatasetProcessor):
 
     def process_time(self, origin: str):
         raise NotImplementedError
-
 
     def num_entities(self):
         return 10623
@@ -512,7 +565,6 @@ class WikiDingDatasetProcessor(DatasetProcessor):
     def __init__(self, config: Config):
         super().__init__(config)
 
-
         self.folder = self.config.get("dataset.folder")
         self.level = self.config.get("dataset.temporal.resolution")
         self.index = self.config.get("dataset.temporal.index")
@@ -524,7 +576,6 @@ class WikiDingDatasetProcessor(DatasetProcessor):
         self.train_raw: List[str] = []
         self.valid_raw: List[str] = []
         self.test_raw: List[str] = []
-
 
         self.train_set = defaultdict(list)
         self.valid_set = defaultdict(list)
@@ -552,7 +603,7 @@ class WikiDingDatasetProcessor(DatasetProcessor):
                     # for line in lines:
 
                     insert_line = line.split('\t')
-                    insert_line[1] = str(int(insert_line[1]) + 10)
+                    insert_line[1] = str(int(insert_line[1]) + 24)
                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
                     insert_line = '\t'.join(insert_line)
 
@@ -620,7 +671,6 @@ class WikiDingDatasetProcessor(DatasetProcessor):
 
     def process_time(self, origin: str):
         raise NotImplementedError
-
 
     def num_entities(self):
         return 12554
@@ -632,126 +682,58 @@ class WikiDingDatasetProcessor(DatasetProcessor):
         return 232
 
 
-@DatasetProcessor.register(name="gdelt_ding")
-class GDELTDingDatasetProcessor(DatasetProcessor):
-    def __init__(self, config: Config):
-        super().__init__(config)
-
-
-        self.folder = self.config.get("dataset.folder")
-        self.level = self.config.get("dataset.temporal.resolution")
-        self.index = self.config.get("dataset.temporal.index")
-        self.float = self.config.get("dataset.temporal.float")
-
-        self.reciprocal_training = self.config.get("task.reciprocal_training")
-        # self.filter_method = self.config.get("data.filter")
-
-        self.train_raw: List[str] = []
-        self.valid_raw: List[str] = []
-        self.test_raw: List[str] = []
-
-
-        self.train_set = defaultdict(list)
-        self.valid_set = defaultdict(list)
-        self.test_set = defaultdict(list)
-
-        self.all_triples = []
-        self.all_quadruples = []
-
-        self.load()
-        self.process()
-        self.filter()
-
-    def load(self):
-        train_file = self.folder + "/train.txt"
-        valid_file = self.folder + "/valid.txt"
-        test_file = self.folder + "/test.txt"
-
-        with open(train_file, "r") as f:
-            if self.reciprocal_training:
-                lines = f.readlines()
-
-                for line in lines:
-                    self.train_raw.append(line)
-
-                    # for line in lines:
-
-                    insert_line = line.split('\t')
-                    insert_line[1] = str(int(insert_line[1]) + 10)
-                    insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
-                    insert_line = '\t'.join(insert_line)
-
-                    self.train_raw.append(insert_line)
-            else:
-                self.train_raw = f.readlines()
-
-            self.train_size = len(self.train_raw)
-
-        with open(valid_file, "r") as f:
-            self.valid_raw = f.readlines()
-
-            self.valid_size = len(self.valid_raw)
-
-        with open(test_file, "r") as f:
-            self.test_raw = f.readlines()
-
-            self.test_size = len(self.test_raw)
-
+@DatasetProcessor.register(name="han")
+class HANDatasetProcessor(DatasetProcessor):
     def process(self):
+        self.ts2id = {str(i): i for i in range(189)}   #232 189
+
         for rd in self.train_raw:
-            head, rel, tail, ts, _ = rd.strip().split('\t')
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
-            ts = int(ts) // 15
-            ts_id = ts
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts_id])
-            self.train_set['timestamp_float'].append(ts)
+            self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
             self.all_triples.append([head, rel, tail])
             self.all_quadruples.append([head, rel, tail, ts_id])
 
         for rd in self.valid_raw:
-            head, rel, tail, ts, _ = rd.strip().split('\t')
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
-            ts = int(ts) // 15
-            ts_id = ts
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
 
-            self.valid_set['triple'].append([head, rel, tail])
-            self.valid_set['timestamp_id'].append([ts_id])
-            self.valid_set['timestamp_float'].append(ts)
+            if '(RECIPROCAL)' not in rd:
+                self.valid_set['triple'].append([head, rel, tail])
+                self.valid_set['timestamp_id'].append([ts_id])
+                self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
         for rd in self.test_raw:
-            head, rel, tail, ts, _ = rd.strip().split('\t')
-            head = int(head)
-            rel = int(rel)
-            tail = int(tail)
-            ts = int(ts) // 15
-            ts_id = ts
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
 
-            self.test_set['triple'].append([head, rel, tail])
-            self.test_set['timestamp_id'].append([ts_id])
-            self.test_set['timestamp_float'].append(ts)
+            if '(RECIPROCAL)' not in rd:
+                self.test_set['triple'].append([head, rel, tail])
+                self.test_set['timestamp_id'].append([ts_id])
+                self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
     def process_time(self, origin: str):
-        raise NotImplementedError
 
-
-    def num_entities(self):
-        return 7691
-
-    def num_relations(self):
-        return 240
-
-    def num_timestamps(self):
-        return 2976
+        return origin

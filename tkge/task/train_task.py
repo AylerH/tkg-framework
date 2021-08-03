@@ -402,8 +402,8 @@ class TrainTask(Task):
                         metrics[pos][key] += batch_metrics[pos][key] * batch_metrics['size']
                 metrics['size'] += batch_metrics['size']
 
-            del batch
-            torch.cuda.empty_cache()
+            # del batch
+            # torch.cuda.empty_cache()
 
             for pos in ['head', 'tail']:
                 for key in metrics[pos].keys():

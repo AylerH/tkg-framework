@@ -9,7 +9,7 @@ task:
   folder: /home/ubuntu/gengyuan/search_experiments
   type: train
   device: 'cuda'
-  reciprocal_training: true
+  reciprocal_training: false
 
 random_seed:
   default: -1
@@ -147,7 +147,7 @@ train:
       args: ~
     temporal_reg:
       type: n3_regularize
-      weight: 0.0
+      weight: 1.9513135030445875e-17
       args: ~
   inplace_regularizer: ~
 

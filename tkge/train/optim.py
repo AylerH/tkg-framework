@@ -8,7 +8,8 @@ from tkge.common.error import ConfigurationError
 def get_optimizer(params, type: str, args: Optional[Dict]):
     optim_dict = {
         'Adam': torch.optim.Adam,
-        'Adagrad': torch.optim.Adagrad
+        'Adagrad': torch.optim.Adagrad,
+        'SGD': torch.optim.SGD
     }
 
     try:
