@@ -742,7 +742,7 @@ class HANDatasetProcessor(DatasetProcessor):
 
 
 @DatasetProcessor.register(name="gdelt-m10_TA")
-class GDELTM10DatasetProcessor(DatasetProcessor):
+class GDELTM10TADatasetProcessor(DatasetProcessor):
     def process(self):
         self.tem_dict = {
             '0y': 0, '1y': 1, '2y': 2, '3y': 3, '4y': 4, '5y': 5, '6y': 6, '7y': 7, '8y': 8, '9y': 9,
@@ -757,8 +757,8 @@ class GDELTM10DatasetProcessor(DatasetProcessor):
             head = self.index_entities(head)
             rel = self.index_relations(rel)
             tail = self.index_entities(tail)
-            ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts_id])
@@ -772,8 +772,8 @@ class GDELTM10DatasetProcessor(DatasetProcessor):
             head = self.index_entities(head)
             rel = self.index_relations(rel)
             tail = self.index_entities(tail)
-            ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
 
             if '(RECIPROCAL)' not in rd:
                 self.valid_set['triple'].append([head, rel, tail])
@@ -788,8 +788,8 @@ class GDELTM10DatasetProcessor(DatasetProcessor):
             head = self.index_entities(head)
             rel = self.index_relations(rel)
             tail = self.index_entities(tail)
-            ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
 
             if '(RECIPROCAL)' not in rd:
                 self.test_set['triple'].append([head, rel, tail])
