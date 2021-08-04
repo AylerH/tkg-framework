@@ -193,7 +193,7 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         valid_file = self.folder + "/valid.txt"
         test_file = self.folder + "/test.txt"
 
-        if self.name == 'wiki' or self.name == 'yago11k':
+        if 'wiki' in self.name or 'yago' in self.name:
             train_triples, valid_triples, test_triples = [], [], []
             train_triple_time, valid_triple_time, test_triple_time = dict(), dict(), dict()
             with open(train_file, 'r') as filein:
