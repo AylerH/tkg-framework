@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/zitao/tkg-framework/data/gdelt-m10
+  folder: /home/ubuntu/zitao/tkg-framework/data/gdelt_m10
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
