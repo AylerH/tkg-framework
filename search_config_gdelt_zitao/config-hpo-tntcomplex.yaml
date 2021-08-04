@@ -33,7 +33,7 @@ dataset:
     float: False
   args: ~
 
-  name: 'gdelt-m10_TA'
+  name: 'gdelt-m10'
   num_entities: -1
   num_relations: -1
   pickle: True
