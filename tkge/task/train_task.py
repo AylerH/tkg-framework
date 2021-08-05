@@ -161,8 +161,8 @@ class TrainTask(Task):
     def main(self):
         self.config.log("BEGIN TRAINING")
 
-        save_freq = self.config.get("train.checkpoint.every")
-        eval_freq = self.config.get("train.valid.every")
+        save_freq = self.config.get("train.checkpoint.every") # 100 batches
+        eval_freq = self.config.get("train.valid.every") # 5 batches
 
         self.best_metric = 0.
         self.best_epoch = 0
@@ -174,14 +174,14 @@ class TrainTask(Task):
             train_size = self.dataset.train_size
 
             start_time = time.time()
-
+            batch_id = 0
             # processing batches
             for pos_batch in self.train_loader:
                 done = False
-
+                batch_id += 1
                 while not done:
                     try:
-                        self.optimizer.zero_grad()
+                        self.optimizer.zero_grad()  # 先把梯度都清零
 
                         batch_loss = 0.
 
@@ -193,7 +193,8 @@ class TrainTask(Task):
                             stop = min(start + self.train_sub_bs, bs)
                             pos_subbatch = pos_batch[start:stop]
                             subbatch_loss, subbatch_factors = self._subbatch_forward(pos_subbatch)
-
+                            # self.save_ckpt(f"epoch_{epoch}batch_{batch_id}subbatch_{(start//self.train_sub_bs)+1}", epoch=epoch)
+                            self.config.log(f"finish:epoch_{epoch}--batch_{batch_id}/{bs}--subbatch_{(start//self.train_sub_bs)+1}.")
                             batch_loss += subbatch_loss
 
                         batch_loss.backward()
