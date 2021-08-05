@@ -193,14 +193,13 @@ class TrainTask(Task):
                             stop = min(start + self.train_sub_bs, bs)
                             pos_subbatch = pos_batch[start:stop]
                             subbatch_loss, subbatch_factors = self._subbatch_forward(pos_subbatch)
-                            # self.save_ckpt(f"epoch_{epoch}batch_{batch_id}subbatch_{(start//self.train_sub_bs)+1}", epoch=epoch)
-                            self.config.log(f"finish:epoch_{epoch}--batch_{batch_id}/{bs}--subbatch_{(start//self.train_sub_bs)+1}.")
-                            batch_loss += subbatch_loss
+                            subbatch_loss.backward()
+                            batch_loss += subbatch_loss.cpu().item()
 
-                        batch_loss.backward()
+                        # batch_loss.backward()
                         self.optimizer.step()
 
-                        total_epoch_loss += batch_loss.cpu().item()
+                        total_epoch_loss += batch_loss
 
                         if subbatch_factors:
                             for name, tensors in subbatch_factors.items():
