@@ -9,7 +9,7 @@ from tkge.common.registrable import Registrable
 from tkge.common.configurable import Configurable
 from tkge.common.config import Config
 from tkge.common.error import ConfigurationError
-from tkge.data.utils import get_all_days_of_year
+from tkge.data.utils import get_all_days_of_year, get_all_days_between
 
 import enum
 import arrow
@@ -51,7 +51,7 @@ class DatasetProcessor(ABC, Registrable, Configurable):
 
         self.load()
         self.process()
-        self.filter()
+        # self.filter()
 
     @classmethod
     def create(cls, config: Config):
@@ -231,16 +231,48 @@ class DatasetProcessor(ABC, Registrable, Configurable):
                     for line in f.readlines():
                         self.train_raw.append(line)
 
+# <<<<<<< wiki_yago_dataset
                         insert_line = line.strip().split('\t')
                         insert_line[1] += '(RECIPROCAL)'
                         insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
                         insert_line = '\t'.join(insert_line)
+# =======
+#         with open(valid_file, "r") as f:
+#             if self.reciprocal_training:
+#                 for line in f.readlines():
+#                     self.valid_raw.append(line)
+
+#                     insert_line = line.strip().split('\t')
+#                     insert_line[1] += '(RECIPROCAL)'
+#                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
+#                     insert_line = '\t'.join(insert_line)
+
+#                     self.valid_raw.append(insert_line)
+#             else:
+#                 self.valid_raw = f.readlines()
+# >>>>>>> master
 
                         self.train_raw.append(insert_line)
                 else:
                     self.train_raw = f.readlines()
 
+# <<<<<<< wiki_yago_dataset
                 self.train_size = len(self.train_raw)
+# =======
+#         with open(test_file, "r") as f:
+#             if self.reciprocal_training:
+#                 for line in f.readlines():
+#                     self.test_raw.append(line)
+
+#                     insert_line = line.strip().split('\t')
+#                     insert_line[1] += '(RECIPROCAL)'
+#                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
+#                     insert_line = '\t'.join(insert_line)
+
+#                     self.test_raw.append(insert_line)
+#             else:
+#                 self.test_raw = f.readlines()
+# >>>>>>> master
 
             with open(valid_file, "r") as f:
                 self.valid_raw = f.readlines()
@@ -285,14 +317,14 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         """
         self.config.assert_true(type in ["static",
                                          "time-aware",
-                                         "off"],
-                                f"{type} filtering is not implemented; use static/time-aware/off filtering.")
+                                         "raw"],
+                                f"{type} filtering is not implemented; use static/time-aware/raw filtering.")
         self.config.assert_true(target in ["s", "p", "o"],
                                 "Only support s(ubject)/p(redicate)/o(bject) prediction task")
 
         filtered_data = defaultdict(list)
 
-        if type != "off":
+        if type != "raw":
             all_tuples = self.all_triples if type == "static" else self.all_quadruples
 
             for tup in all_tuples:
@@ -318,10 +350,11 @@ class DatasetProcessor(ABC, Registrable, Configurable):
         self.config.log(f"Number of relations : {self.num_relations()}")
         self.config.log(f"Number of temporal identifiers : {self.num_timestamps()}")
         self.config.log(f"\n")
-        self.config.log(f"Train set size : {self.train_size}")
-        self.config.log(f"Valid set size : {self.valid_size}")
-        self.config.log(f"Test set size : {self.test_size}")
+        self.config.log(f"Train set size : {len(self.train_set['triple'])}")
+        self.config.log(f"Valid set size : {len(self.valid_set['triple'])}")
+        self.config.log(f"Test set size : {len(self.test_set['triple'])}")
         self.config.log('==============================================')
+
 
 
 @DatasetProcessor.register(name="gdelt")
@@ -415,12 +448,13 @@ class ICEWS14DatasetProcessor(DatasetProcessor):
             ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
 
-            self.valid_set['triple'].append([head, rel, tail])
-            self.valid_set['timestamp_id'].append([ts_id])
-            self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            if '(RECIPROCAL)' not in rd:
+                self.valid_set['triple'].append([head, rel, tail])
+                self.valid_set['timestamp_id'].append([ts_id])
+                self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
         for rd in self.test_raw:
             head, rel, tail, ts = rd.strip().split('\t')
@@ -430,12 +464,13 @@ class ICEWS14DatasetProcessor(DatasetProcessor):
             ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
 
-            self.test_set['triple'].append([head, rel, tail])
-            self.test_set['timestamp_id'].append([ts_id])
-            self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            if '(RECIPROCAL)' not in rd:
+                self.test_set['triple'].append([head, rel, tail])
+                self.test_set['timestamp_id'].append([ts_id])
+                self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
     def process_time(self, origin: str):
         all_resolutions = ['year', 'month', 'day', 'hour', 'minute', 'second']
@@ -480,12 +515,13 @@ class ICEWS1114DatasetProcessor(DatasetProcessor):
             ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
 
-            self.valid_set['triple'].append([head, rel, tail])
-            self.valid_set['timestamp_id'].append([ts_id])
-            self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            if '(RECIPROCAL)' not in rd:
+                self.valid_set['triple'].append([head, rel, tail])
+                self.valid_set['timestamp_id'].append([ts_id])
+                self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
         for rd in self.test_raw:
             head, rel, tail, ts = rd.strip().split('\t')
@@ -495,12 +531,13 @@ class ICEWS1114DatasetProcessor(DatasetProcessor):
             ts = self.process_time(ts)
             ts_id = self.index_timestamps(ts)
 
-            self.test_set['triple'].append([head, rel, tail])
-            self.test_set['timestamp_id'].append([ts_id])
-            self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+            if '(RECIPROCAL)' not in rd:
+                self.test_set['triple'].append([head, rel, tail])
+                self.test_set['timestamp_id'].append([ts_id])
+                self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
 
-            self.all_triples.append([head, rel, tail])
-            self.all_quadruples.append([head, rel, tail, ts_id])
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
 
     def process_time(self, origin: str):
         all_resolutions = ['year', 'month', 'day', 'hour', 'minute', 'second']
@@ -512,6 +549,69 @@ class ICEWS1114DatasetProcessor(DatasetProcessor):
 
         return ts
 
+
+@DatasetProcessor.register(name="gdelt-m10")
+class GDELTM10DatasetProcessor(DatasetProcessor):
+    def process(self):
+        all_timestamp = get_all_days_between('2015-10-01', '2015-10-31')
+        self.ts2id = {ts: (arrow.get(ts) - arrow.get('2015-10-01')).days for ts in all_timestamp}
+
+        for rd in self.train_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
+
+            self.train_set['triple'].append([head, rel, tail])
+            self.train_set['timestamp_id'].append([ts_id])
+            self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.valid_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
+
+            if '(RECIPROCAL)' not in rd:
+                self.valid_set['triple'].append([head, rel, tail])
+                self.valid_set['timestamp_id'].append([ts_id])
+                self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.test_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = self.process_time(ts)
+            ts_id = self.index_timestamps(ts)
+
+            if '(RECIPROCAL)' not in rd:
+                self.test_set['triple'].append([head, rel, tail])
+                self.test_set['timestamp_id'].append([ts_id])
+                self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
+
+    def process_time(self, origin: str):
+        all_resolutions = ['year', 'month', 'day', 'hour', 'minute', 'second']
+        self.config.assert_true(self.resolution in all_resolutions, f"Time granularity should be {all_resolutions}")
+
+        ts = origin.split('-') + ['00', '00', '00']
+        ts = ts[:all_resolutions.index(self.resolution) + 1]
+        ts = '-'.join(ts)
+
+        return ts
 
 @DatasetProcessor.register(name="icews05-15")
 class ICEWS0515DatasetProcessor(DatasetProcessor):
@@ -551,6 +651,9 @@ class ICEWS0515DatasetProcessor(DatasetProcessor):
 
     def process_time(self, origin: str):
         raise NotImplementedError
+
+    def num_relations(self):
+        return
 
 
 @DatasetProcessor.register(name="wiki")

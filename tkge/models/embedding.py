@@ -83,6 +83,8 @@ class EntityEmbedding(BaseEmbedding):
                 self._tail[k] = nn.Embedding(num_embeddings=self.dataset.num_entities(),
                                              embedding_dim=embedding_dim)
                 self.initialize(init_method)(self._tail[k].weight)
+            else:
+                self._tail = self._head
 
         self._head = nn.ModuleDict(self._head)
         self._tail = nn.ModuleDict(self._tail)
@@ -202,7 +204,8 @@ class ExtendedBochnerTemporalEmbedding(BaseEmbedding):
     def __init__(self, config: Config, dataset: DatasetProcessor):
         super(ExtendedBochnerTemporalEmbedding, self).__init__(config=config, dataset=dataset)
 
-        dim = self.config.get("model.embedding.global.dim")
+        # dim = self.config.get("model.embedding.global.dim")
+        dim = self.config.get("model.embedding.temporal.keys.real.dim")
         init_type = self.config.get("model.embedding.global.init")
         t_min = self.config.get("model.embedding.global.t_min")
         t_max = self.config.get("model.embedding.global.t_max")

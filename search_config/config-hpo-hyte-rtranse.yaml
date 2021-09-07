@@ -9,7 +9,7 @@ task:
   folder: /home/ubuntu/gengyuan/search_experiments
   type: train
   device: 'cuda'
-  reciprocal_training: true
+  reciprocal_training: false
 
 random_seed:
   default: -1
@@ -76,7 +76,7 @@ model:
     target:
       - 'rel+temp'
       - 'ent+temp'
-    p: 0.4
+    p: 0.6
     args: ~
   transformation:
     type: translation_tf
@@ -129,7 +129,7 @@ train:
   optimizer:
     type: Adam
     args:
-      lr: 0.01
+      lr: 0.00801124320768471
 
     default:
       type: Adam           # sgd, adagrad, adam
@@ -139,16 +139,16 @@ train:
 
   regularizer:
     entity_reg:
-      type: none_regularize
-      weight: 0.0
+      type: f2_regularize
+      weight: 0.03680558279156685
       args: ~
     relation_reg:
-      type: none_regularize
-      weight: 0.0
+      type: f2_regularize
+      weight: 0.07622922528535128
       args: ~
     temporal_reg:
       type: n3_regularize
-      weight: 0.01
+      weight: 0.0381662704050541
       args: ~
   inplace_regularizer: ~
 
