@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_m10
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: True
   args: ~
 
-  name: 'icews14_TA'
+  name: 'gdelt-m10_TA'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -137,12 +137,12 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 60
-  num_random_trials: 20
+  num_trials: 20
+  num_random_trials: 14
   hyperparam:
     - name: model.emb_dim
       type: choice
-      values: [128, 100, 64]
+      values: [128, 64]
       value_type: int
 #    - name: train.regularizer.temporal_reg.weight
 #      type: range
