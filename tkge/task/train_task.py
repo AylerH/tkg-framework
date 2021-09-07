@@ -161,8 +161,8 @@ class TrainTask(Task):
     def main(self):
         self.config.log("BEGIN TRAINING")
 
-        save_freq = self.config.get("train.checkpoint.every")
-        eval_freq = self.config.get("train.valid.every")
+        save_freq = self.config.get("train.checkpoint.every") # 100 batches
+        eval_freq = self.config.get("train.valid.every") # 5 batches
 
         self.best_metric = 0.
         self.best_epoch = 0
@@ -174,14 +174,14 @@ class TrainTask(Task):
             train_size = self.dataset.train_size
 
             start_time = time.time()
-
+            batch_id = 0
             # processing batches
             for pos_batch in self.train_loader:
                 done = False
-
+                batch_id += 1
                 while not done:
                     try:
-                        self.optimizer.zero_grad()
+                        self.optimizer.zero_grad()  # 先把梯度都清零
 
                         batch_loss = 0.
 
@@ -193,13 +193,13 @@ class TrainTask(Task):
                             stop = min(start + self.train_sub_bs, bs)
                             pos_subbatch = pos_batch[start:stop]
                             subbatch_loss, subbatch_factors = self._subbatch_forward(pos_subbatch)
+                            subbatch_loss.backward()
+                            batch_loss += subbatch_loss.cpu().item()
 
-                            batch_loss += subbatch_loss
-
-                        batch_loss.backward()
+                        # batch_loss.backward()
                         self.optimizer.step()
 
-                        total_epoch_loss += batch_loss.cpu().item()
+                        total_epoch_loss += batch_loss
 
                         if subbatch_factors:
                             for name, tensors in subbatch_factors.items():

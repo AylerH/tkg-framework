@@ -9,6 +9,8 @@ import time
 
 from tkge.data.dataset import DatasetProcessor
 from tkge.common.config import Config
+from tkge.data.utils import get_all_days_between
+import arrow
 
 from collections import defaultdict
 
@@ -226,37 +228,37 @@ class GDELTM10AtiseDatasetProcessor(DatasetProcessor):
 
         return day
 
-@DatasetProcessor.register(name="yago11k")
-class Yago11kDatasetProcessor(DatasetProcessor):
-    def process(self):
-        year_list = []
-
-        for rd in self.train_raw:
-            head, rel, tail, ts_start, ts_end = rd.strip().split('\t')
-            head = self.index_entities(head)
-            rel = self.index_relations(rel)
-            tail = self.index_entities(tail)
-            ts_start = self.process_time(ts_start, True)
-            ts_end = self.process_time(ts_start, False)
-
-            if ts_start < ts_end:
-                ts_end = self.config.get("dataset.args.yearmax")
-
-        for rd in self.valid_raw:
-            pass
-
-        for rd in self.test_raw:
-            pass
-
-    def process_time(self, origin: str, start: bool = True):
-        year = origin.split('-')[0]
-
-        if year.find('#') != -1 and len(year) == 4:
-            year = int(year)
-        else:
-            year = self.config.get("dataset.args.yearmin") if start else self.config.get("dataset.args.yearmax")
-
-        return year
+# @DatasetProcessor.register(name="yago11k")
+# class Yago11kDatasetProcessor(DatasetProcessor):
+#     def process(self):
+#         year_list = []
+#
+#         for rd in self.train_raw:
+#             head, rel, tail, ts_start, ts_end = rd.strip().split('\t')
+#             head = self.index_entities(head)
+#             rel = self.index_relations(rel)
+#             tail = self.index_entities(tail)
+#             ts_start = self.process_time(ts_start, True)
+#             ts_end = self.process_time(ts_start, False)
+#
+#             if ts_start < ts_end:
+#                 ts_end = self.config.get("dataset.args.yearmax")
+#
+#         for rd in self.valid_raw:
+#             pass
+#
+#         for rd in self.test_raw:
+#             pass
+#
+#     def process_time(self, origin: str, start: bool = True):
+#         year = origin.split('-')[0]
+#
+#         if year.find('#') != -1 and len(year) == 4:
+#             year = int(year)
+#         else:
+#             year = self.config.get("dataset.args.yearmin") if start else self.config.get("dataset.args.yearmax")
+#
+#         return year
 
 
 
@@ -771,3 +773,75 @@ class HANDatasetProcessor(DatasetProcessor):
     def process_time(self, origin: str):
 
         return origin
+
+
+@DatasetProcessor.register(name="gdelt-m10_TA")
+class GDELTM10TADatasetProcessor(DatasetProcessor):
+    def process(self):
+        self.tem_dict = {
+            '0y': 0, '1y': 1, '2y': 2, '3y': 3, '4y': 4, '5y': 5, '6y': 6, '7y': 7, '8y': 8, '9y': 9,
+            '10m': 10,
+            '0d': 11, '1d': 12, '2d': 13, '3d': 14, '4d': 15, '5d': 16, '6d': 17, '7d': 18, '8d': 19, '9d': 20,
+        }
+        all_timestamp = get_all_days_between('2015-10-01', '2015-10-31')
+        self.ts2id = {ts: (arrow.get(ts) - arrow.get('2015-10-01')).days for ts in all_timestamp}
+
+        for rd in self.train_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            self.train_set['triple'].append([head, rel, tail])
+            self.train_set['timestamp_id'].append([ts_id])
+            self.train_set['timestamp_float'].append(ts)
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.valid_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            if '(RECIPROCAL)' not in rd:
+                self.valid_set['triple'].append([head, rel, tail])
+                self.valid_set['timestamp_id'].append([ts_id])
+                self.valid_set['timestamp_float'].append(ts)
+
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
+
+        for rd in self.test_raw:
+            head, rel, tail, ts = rd.strip().split('\t')
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts_id = self.index_timestamps(ts)
+            ts = self.process_time(ts)
+
+            if '(RECIPROCAL)' not in rd:
+                self.test_set['triple'].append([head, rel, tail])
+                self.test_set['timestamp_id'].append([ts_id])
+                self.test_set['timestamp_float'].append(ts)
+
+                self.all_triples.append([head, rel, tail])
+                self.all_quadruples.append([head, rel, tail, ts_id])
+
+    def process_time(self, origin: str):
+        ts = []
+        year, month, day = origin.split('-')
+
+        ts.extend([self.tem_dict[f'{int(yi):01}y'] for yi in year])
+        ts.extend([self.tem_dict[f'{int(month):02}m']])
+        ts.extend([self.tem_dict[f'{int(di):01}d'] for di in day])
+
+        return ts
+
+    def num_time_identifier(self):
+        return 21

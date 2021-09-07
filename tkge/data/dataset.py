@@ -125,164 +125,59 @@ class DatasetProcessor(ABC, Registrable, Configurable):
 
         return year2id
 
-    def create_id_labels(self, triple_time):
-        YEARMAX = '3000'
-        YEARMIN = '-50'
-
-        inp_idx, start_idx, end_idx = [], [], []
-        for k, v in triple_time.items():
-            start = v[0].split('-')[0]
-            end = v[1].split('-')[0]
-            if start == '####':
-                start = YEARMIN
-            elif start.find('#') != -1 or len(start) != 4:  # 如果字符串内包含#或者年份的长度不等于4，跳出本次循环
-                continue
-            if end == '####':
-                end = YEARMAX
-            elif end.find('#') != -1 or len(end) != 4:
-                continue
-            if start > end:
-                end = YEARMAX
-
-            inp_idx.append(k)
-            if start == YEARMIN:
-                start_idx.append(0)
-            else:
-                for key, lbl in sorted(self.year2id.items(), key=lambda x: x[1]):
-                    if start >= key[0] and start <= key[1]:
-                        start_idx.append(lbl)
-            if end == YEARMAX:
-                end_idx.append(len(self.year2id.keys()) - 1)
-            else:
-                for key, lbl in sorted(self.year2id.items(), key=lambda x: x[1]):
-                    if end >= key[0] and end <= key[1]:
-                        end_idx.append(lbl)
-
-        return inp_idx, start_idx, end_idx
-
-    def get_pretreated_data(self, triple_time, triples):
-        inp_idx, start_idx, end_idx = self.create_id_labels(triple_time)
-        keep_idx = set(inp_idx)
-        for i in range(len(triples) - 1, -1, -1):
-            if i not in keep_idx:
-                del triples[i]
-
-        posh, rela, post = zip(*triples)
-        head, rel, tail = zip(*triples)
-        posh = list(posh)
-        post = list(post)
-        rela = list(rela)
-        head = list(head)
-        tail = list(tail)
-        rel = list(rel)
-        for i in range(len(posh)):
-            if start_idx[i] < end_idx[i]:
-                for j in range(start_idx[i] + 1, end_idx[i] + 1):
-                    head.append(posh[i])
-                    rel.append(rela[i])
-                    tail.append(post[i])
-                    start_idx.append(j)
-        pretreated_data = []
-        for i in range(len(head)):
-            pretreated_data.append([head[i], rel[i], tail[i], start_idx[i]])
-
-        return pretreated_data
 
     def load(self):
         train_file = self.folder + "/train.txt"
         valid_file = self.folder + "/valid.txt"
         test_file = self.folder + "/test.txt"
 
-        if self.name == 'wiki' or self.name == 'yago11k':
-            train_triples, valid_triples, test_triples = [], [], []
-            train_triple_time, valid_triple_time, test_triple_time = dict(), dict(), dict()
-            with open(train_file, 'r') as filein:
-                count = 0
-                for line in filein:
-                    train_triples.append([x.strip() for x in line.split()[0:3]])
-                    train_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
-                    count += 1
-            self.year2id = self.create_year2id(train_triple_time)
-            self.train_raw = self.get_pretreated_data(train_triple_time,train_triples)
+        with open(train_file, "r") as f:
+            if self.reciprocal_training:
+                for line in f.readlines():
+                    self.train_raw.append(line)
+
+                    insert_line = line.strip().split('\t')
+                    insert_line[1] += '(RECIPROCAL)'
+                    insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
+                    insert_line = '\t'.join(insert_line)
+
+                    self.train_raw.append(insert_line)
+            else:
+                self.train_raw = f.readlines()
+
             self.train_size = len(self.train_raw)
 
-            with open(valid_file, 'r') as filein:
-                count = 0
-                for line in filein:
-                    valid_triples.append([x.strip() for x in line.split()[0:3]])
-                    valid_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
-                    count += 1
-            self.valid_raw = self.get_pretreated_data(valid_triple_time,valid_triples)
-            self.valid_size = len(self.valid_raw)
+        with open(valid_file, "r") as f:
+            if self.reciprocal_training:
+                for line in f.readlines():
+                    self.valid_raw.append(line)
 
-            with open(test_file, 'r') as filein:
-                count = 0
-                for line in filein:
-                    test_triples.append([x.strip() for x in line.split()[0:3]])
-                    test_triple_time[count] = [x.split('-')[0] for x in line.split()[3:5]]
-                    count += 1
-            self.test_raw = self.get_pretreated_data(test_triple_time,test_triples)
-            self.test_size = len(self.test_raw)
-            self.max_year = len(self.year2id)
+                    insert_line = line.strip().split('\t')
+                    insert_line[1] += '(RECIPROCAL)'
+                    insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
+                    insert_line = '\t'.join(insert_line)
 
-        else:
-            with open(train_file, "r") as f:
-                if self.reciprocal_training:
-                    for line in f.readlines():
-                        self.train_raw.append(line)
-
-# <<<<<<< wiki_yago_dataset
-                        insert_line = line.strip().split('\t')
-                        insert_line[1] += '(RECIPROCAL)'
-                        insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
-                        insert_line = '\t'.join(insert_line)
-# =======
-#         with open(valid_file, "r") as f:
-#             if self.reciprocal_training:
-#                 for line in f.readlines():
-#                     self.valid_raw.append(line)
-
-#                     insert_line = line.strip().split('\t')
-#                     insert_line[1] += '(RECIPROCAL)'
-#                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
-#                     insert_line = '\t'.join(insert_line)
-
-#                     self.valid_raw.append(insert_line)
-#             else:
-#                 self.valid_raw = f.readlines()
-# >>>>>>> master
-
-                        self.train_raw.append(insert_line)
-                else:
-                    self.train_raw = f.readlines()
-
-# <<<<<<< wiki_yago_dataset
-                self.train_size = len(self.train_raw)
-# =======
-#         with open(test_file, "r") as f:
-#             if self.reciprocal_training:
-#                 for line in f.readlines():
-#                     self.test_raw.append(line)
-
-#                     insert_line = line.strip().split('\t')
-#                     insert_line[1] += '(RECIPROCAL)'
-#                     insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
-#                     insert_line = '\t'.join(insert_line)
-
-#                     self.test_raw.append(insert_line)
-#             else:
-#                 self.test_raw = f.readlines()
-# >>>>>>> master
-
-            with open(valid_file, "r") as f:
+                    self.valid_raw.append(insert_line)
+            else:
                 self.valid_raw = f.readlines()
 
-                self.valid_size = len(self.valid_raw)
+            self.valid_size = len(self.valid_raw)
 
-            with open(test_file, "r") as f:
+        with open(test_file, "r") as f:
+            if self.reciprocal_training:
+                for line in f.readlines():
+                    self.test_raw.append(line)
+
+                    insert_line = line.strip().split('\t')
+                    insert_line[1] += '(RECIPROCAL)'
+                    insert_line[0], insert_line[2] = insert_line[2], insert_line[0]
+                    insert_line = '\t'.join(insert_line)
+
+                    self.test_raw.append(insert_line)
+            else:
                 self.test_raw = f.readlines()
 
-                self.test_size = len(self.test_raw)
+            self.test_size = len(self.test_raw)
 
     @abstractmethod
     def process_time(self, origin: str):
@@ -668,6 +563,42 @@ class WIKIDatasetProcessor(DatasetProcessor):
             rel = self.index_relations(rel)
             tail = self.index_entities(tail)
             ts = int(ts)
+            
+            self.train_set['triple'].append([head, rel, tail])
+            self.train_set['timestamp_id'].append([ts])
+            # self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
+        for rd in self.valid_raw:
+            head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = int(ts)
+
+            self.valid_set['triple'].append([head, rel, tail])
+            self.valid_set['timestamp_id'].append([ts])
+            # self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
+        for rd in self.test_raw:
+            head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = int(ts)
+
+            self.test_set['triple'].append([head, rel, tail])
+            self.test_set['timestamp_id'].append([ts])
+            # self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts])
@@ -720,6 +651,42 @@ class YAGODatasetProcessor(DatasetProcessor):
             rel = self.index_relations(rel)
             tail = self.index_entities(tail)
             ts = int(ts)
+            x
+            self.train_set['triple'].append([head, rel, tail])
+            self.train_set['timestamp_id'].append([ts])
+            # self.train_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
+        for rd in self.valid_raw:
+            head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = int(ts)
+
+            self.valid_set['triple'].append([head, rel, tail])
+            self.valid_set['timestamp_id'].append([ts])
+            # self.valid_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
+        for rd in self.test_raw:
+            head, rel, tail, ts = rd[0], rd[1], rd[2], rd[3]
+            head = self.index_entities(head)
+            rel = self.index_relations(rel)
+            tail = self.index_entities(tail)
+            ts = int(ts)
+
+            self.test_set['triple'].append([head, rel, tail])
+            self.test_set['timestamp_id'].append([ts])
+            # self.test_set['timestamp_float'].append(list(map(lambda x: int(x), ts.split('-'))))
+
+            self.all_triples.append([head, rel, tail])
+            self.all_quadruples.append([head, rel, tail, ts])
+
 
             self.train_set['triple'].append([head, rel, tail])
             self.train_set['timestamp_id'].append([ts])
