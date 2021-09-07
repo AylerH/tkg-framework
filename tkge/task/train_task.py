@@ -161,8 +161,8 @@ class TrainTask(Task):
     def main(self):
         self.config.log("BEGIN TRAINING")
 
-        save_freq = self.config.get("train.checkpoint.every") # 100 batches
-        eval_freq = self.config.get("train.valid.every") # 5 batches
+        save_freq = self.config.get("train.checkpoint.every")
+        eval_freq = self.config.get("train.valid.every")
 
         self.best_metric = 0.
         self.best_epoch = 0
@@ -181,7 +181,7 @@ class TrainTask(Task):
                 batch_id += 1
                 while not done:
                     try:
-                        self.optimizer.zero_grad()  # 先把梯度都清零
+                        self.optimizer.zero_grad()
 
                         batch_loss = 0.
 
