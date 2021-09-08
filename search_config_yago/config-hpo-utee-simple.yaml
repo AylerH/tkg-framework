@@ -6,10 +6,10 @@ console:
 
 #local
 task:
-  folder: /home/ubuntu/gengyuan/search_experiments
+  folder: /home/ubuntu/zitao/search_experiments
   type: train
   device: 'cuda'
-  reciprocal_training: true
+  reciprocal_training: True
 
 random_seed:
   default: -1
@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/zitao/tkg-framework/data/yago11k
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: False
   args: ~
 
-  name: 'icews14'
+  name: 'yago11k'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,37 +48,40 @@ negative_sampling:
 
 
 model:
-  type: translation_transe_model
+  type: utee_pipeline_dropout_model
 
   embedding:
     global:
-      dim: 512
+      dim: 128
       init: xavier_uniform
-
+      t_min: 1
+      t_max: 365
     entity:
       pos_aware: True
       keys:
         real:
-          dim: 160
+          dim: 128
           init: xavier_uniform
+
     relation:
       keys:
         real:
-          dim: 160
+          dim: 128
           init: xavier_uniform
     temporal:
       keys:
         real:
-          dim: 160
+          dim: 1600 # should have no effect
           init: xavier_uniform
   fusion:
-    type: addition_fusion
+    type: concatenate_fusion
     target:
-      - 'rel+temp'
-    p: 0.5
+      - 'ent+temp'
+    p: 0.0
+    se: 0.6
     args: ~
   transformation:
-    type: translation_tf
+    type: distmult_tf
     gamma: 100
     p: 1
     range: 10
@@ -89,17 +92,17 @@ model:
   args: ~
 
 
-
 train:
   # Split used for training (specified under 'data.files').
   split: train
   type: negative_sampling
 
   loss:
-    type: cross_entropy_loss
+    type: binary_cross_entropy_loss
     args: ~
 
   max_epochs: 100
+
 
   loader:
     num_workers: 0
@@ -120,7 +123,7 @@ train:
       early_stop: True
       patience: 30
       epochs: 50
-      metric_thresh: 0.2
+      metric_thresh: 0.15
 
   batch_size: 512
   subbatch_size: -1
@@ -128,13 +131,8 @@ train:
   optimizer:
     type: Adam
     args:
-      lr: 0.007532405044242736
+      lr: 0.001
 
-    default:
-      type: Adam           # sgd, adagrad, adam
-
-      args:
-        +++: +++
 
   regularizer:
     entity_reg:
@@ -144,10 +142,6 @@ train:
     relation_reg:
       type: none_regularize
       weight: 0.0
-      args: ~
-    temporal_reg:
-      type: n3_regularize
-      weight: 1.9513135030445875e-17
       args: ~
   inplace_regularizer: ~
 
@@ -175,46 +169,24 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 20
-  num_random_trials: 10
+  num_trials: 100
+  num_random_trials: 60
   hyperparam:
-#    - name: model.embedding.global.dim
-#      type: choice
-#      values: [512, 256, 128, 100, 64]
-#      value_type: int
-#    - name: train.regularizer.temporal_reg.weight
-#      type: range
-#      bounds: [0.0, 0.1]
-#      value_type: float
-    - name: train.optimizer.args.lr
-      type: range
-      bounds: [0.0000001, 0.01]
-      value_type: float
-#    - name: model.fusion.p
-#      type: choice
-#      values: [0.0, 0.2, 0.4, 0.5, 0.6]
-#      value_type: float
-#    - name: task.reciprocal_training
-#      type: choice
-#      values: [true, false]
-#      value_type: bool
-#    - name: train.loss.type
-#      type: choice
-#      values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
-#      value_type: str
-    - name: model.embedding.entity.pos_aware
+    - name: model.embedding.global.dim
       type: choice
-      values: [False, True]
-      value_type: bool
-
-    # phase2
-#    - name: model.embedding.global.init
-#      type: choice
-#      values: ['xavier_uniform', 'xavier_normal']
-#      value_type: str
+      values: [512, 256, 128]
+      value_type: int
+    - name: model.embedding.global.init
+      type: choice
+      values: ['xavier_uniform', 'xavier_normal']
+      value_type: str
+    - name: model.fusion.se
+      type: range
+      bounds: [0.4, 1.0]
+      value_type: float
     - name: train.regularizer.entity_reg.type
       type: choice
-      values: ['f2_regularize', 'lambda3_regularize']
+      values: ['none_regularize', 'f2_regularize']
       value_type: str
     - name: train.regularizer.entity_reg.weight
       type: range
@@ -222,11 +194,21 @@ hpo:
       value_type: float
     - name: train.regularizer.relation_reg.type
       type: choice
-      values: ['f2_regularize', 'lambda3_regularize']
+      values: ['none_regularize', 'f2_regularize']
       value_type: str
     - name: train.regularizer.relation_reg.weight
       type: range
       bounds: [0.0, 0.1]
       value_type: float
-
-
+    - name: train.optimizer.args.lr
+      type: range
+      bounds: [0.000001, 0.01]
+      value_type: float
+    - name: model.fusion.p
+      type: choice
+      values: [0.2, 0.4, 0.6]
+      value_type: float
+    - name: train.loss.type
+      type: choice
+      values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
+      value_type: str

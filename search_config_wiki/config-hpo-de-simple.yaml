@@ -6,7 +6,7 @@ console:
 
 #local
 task:
-  folder: /home/ubuntu/gengyuan/search_experiments
+  folder: /home/ubuntu/zitao/search_experiments
   type: train
   device: 'cuda'
   reciprocal_training: true
@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/zitao/tkg-framework/data/wiki
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: True
   args: ~
 
-  name: 'icews14'
+  name: 'wiki_float'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,13 +48,13 @@ negative_sampling:
 
 
 model:
-  type: de_pipeline_dropout_reg_model
+  type: de_pipeline_dropout_model
 
   p: 0.4
 
   embedding:
     global:
-      dim: 128
+      dim: 160
       init: xavier_uniform
 
     entity:
@@ -102,7 +102,8 @@ model:
       - 'ent+temp'
     l1_flag: True
     p: 0.4
-    se: 0.4233581293
+    emb_dim: 160
+    se: 0.32
     args: ~
   transformation:
     type: distmult_tf
@@ -123,7 +124,7 @@ train:
   type: negative_sampling
 
   loss:
-    type: binary_cross_entropy_loss
+    type: cross_entropy_loss
     args: ~
 
   max_epochs: 100
@@ -150,13 +151,13 @@ train:
       epochs: 50
       metric_thresh: 0.1
 
-  batch_size: 512
+  batch_size: 256
   subbatch_size: 64
   subbatch_adaptive: True
   optimizer:
     type: Adam
     args:
-      lr: 0.003882563641
+      lr: 0.001
 
     default:
       type: Adam           # sgd, adagrad, adam
@@ -165,11 +166,7 @@ train:
         +++: +++
 
   regularizer:
-    static_entity_reg:
-      type: none_regularize
-      weight: 0.0
-      args: ~
-    dynamic_entity_reg:
+    entity_reg:
       type: none_regularize
       weight: 0.0
       args: ~
@@ -207,12 +204,12 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 100
-  num_random_trials: 64
+  num_trials: 40
+  num_random_trials: 20
   hyperparam:
     - name: model.embedding.global.dim
       type: choice
-      values: [256, 128]
+      values: [256, 100]
       value_type: int
 #    - name: train.batch_size
 #      type: choice
@@ -220,16 +217,16 @@ hpo:
 #      value_type: int
     - name: train.optimizer.args.lr
       type: range
-      bounds: [0.0000001, 0.01]
+      bounds: [0.000001, 0.01]
       value_type: float
     - name: model.fusion.se
       type: range
       bounds: [0.0, 1.0]
       value_type: float
-#    - name: model.embedding.global.init
-#      type: choice
-#      values: ['xavier_uniform', 'xavier_normal']
-#      value_type: str
+    - name: model.embedding.global.init
+      type: choice
+      values: ['xavier_uniform', 'xavier_normal']
+      value_type: str
 #    - name: task.reciprocal_training
 #      type: choice
 #      values: [true, false]
@@ -240,27 +237,19 @@ hpo:
       value_type: str
     - name: model.fusion.p
       type: choice
-      values: [0.0, 0.2, 0.4, 0.5, 0.6]
+      values: [0.2, 0.4, 0.6]
       value_type: float
-    - name: train.regularizer.dynamic_entity_reg.type
+    - name: train.regularizer.entity_reg.type
       type: choice
-      values: ['f2_regularize', 'none_regularize']
+      values: ['none_regularize', 'f2_regularize']
       value_type: str
-    - name: train.regularizer.dynamic_entity_reg.weight
-      type: range
-      bounds: [0.0, 0.1]
-      value_type: float
-    - name: train.regularizer.static_entity_reg.type
-      type: choice
-      values: ['f2_regularize', 'none_regularize']
-      value_type: str
-    - name: train.regularizer.static_entity_reg.weight
+    - name: train.regularizer.entity_reg.weight
       type: range
       bounds: [0.0, 0.1]
       value_type: float
     - name: train.regularizer.relation_reg.type
       type: choice
-      values: ['f2_regularize', 'none_regularize']
+      values: ['none_regularize', 'f2_regularize']
       value_type: str
     - name: train.regularizer.relation_reg.weight
       type: range

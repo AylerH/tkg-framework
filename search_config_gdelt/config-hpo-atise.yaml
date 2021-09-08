@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/icews14
+  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_m10
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -34,7 +34,7 @@ dataset:
     gran: 3
   args: ~
 
-  name: 'icews14_atise'
+  name: 'gdelt-m10-atise'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -143,8 +143,8 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 40
-  num_random_trials: 20
+  num_trials: 60
+  num_random_trials: 35
   hyperparam:
     - name: model.embedding_dim
       type: choice

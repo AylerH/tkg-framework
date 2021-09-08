@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/zitao/tkg-framework/data/gdelt_m10
+  folder: /home/ubuntu/zitao/tkg-framework/data/yago11k
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,26 +33,61 @@ dataset:
     float: False
   args: ~
 
-  name: 'gdelt-m10'
+  name: 'yago11k'
   num_entities: -1
   num_relations: -1
   pickle: True
 
 negative_sampling:
-  type: 'pseudo_sampling'
-  num_samples: -1 # should has no effect
+  type: 'time_agnostic'
+  num_samples: 500
   filter: False
   as_matrix: True
-  target: tail
+  target: both
   args: ~
+
 
 model:
-  type: 'tntcomplex'
-  rank: 1600
-  no_time_emb: False
-  init_size: 0.01
-  args: ~
+  type: translation_transe_model
 
+  embedding:
+    global:
+      dim: 128
+      init: xavier_uniform
+
+    entity:
+      pos_aware: True
+      keys:
+        real:
+          dim: 160
+          init: xavier_uniform
+    relation:
+      keys:
+        real:
+          dim: 160
+          init: xavier_uniform
+    temporal:
+      keys:
+        real:
+          dim: 160
+          init: xavier_uniform
+  fusion:
+    type: reproject_fusion
+    target:
+      - 'rel+temp'
+      - 'ent+temp'
+    p: 0.6
+    args: ~
+  transformation:
+    type: translation_tf
+    gamma: 100
+    p: 1
+    range: 10
+    args: ~
+  scorer:
+    inverse: True
+
+  args: ~
 
 
 
@@ -65,7 +100,7 @@ train:
     type: cross_entropy_loss
     args: ~
 
-  max_epochs: 50
+  max_epochs: 100
 
   loader:
     num_workers: 0
@@ -88,28 +123,32 @@ train:
       epochs: 50
       metric_thresh: 0.2
 
-  batch_size: 1000
+  batch_size: 512
   subbatch_size: -1
   subbatch_adaptive: True
   optimizer:
-    type: Adagrad
+    type: Adam
     args:
-      lr: 0.1
+      lr: 0.00801124320768471
 
     default:
-      type: Adagrad           # sgd, adagrad, adam
+      type: Adam           # sgd, adagrad, adam
 
       args:
         +++: +++
 
   regularizer:
-    n3:
-      type: n3_regularize
-      weight: 0.01
+    entity_reg:
+      type: f2_regularize
+      weight: 0.03680558279156685
       args: ~
-    lambda3:
-      type: lambda3_regularize
-      weight: 0.01
+    relation_reg:
+      type: f2_regularize
+      weight: 0.07622922528535128
+      args: ~
+    temporal_reg:
+      type: n3_regularize
+      weight: 0.0381662704050541
       args: ~
   inplace_regularizer: ~
 
@@ -137,31 +176,50 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 80
-  num_random_trials: 30
+  num_trials: 60
+  num_random_trials: 40
   hyperparam:
-    - name: model.rank
+    - name: model.embedding.global.dim
       type: choice
-      values: [1560, 780, 156]
+      values: [512, 256, 128]
       value_type: int
+    - name: train.regularizer.temporal_reg.weight
+      type: range
+      bounds: [0.0, 0.1]
+      value_type: float
     - name: train.optimizer.args.lr
       type: range
-      bounds: [0.05, 0.15]
+      bounds: [0.000001, 0.01]
       value_type: float
-
+    - name: model.fusion.p
+      type: choice
+      values: [0.2, 0.4, 0.6]
+      value_type: float
+#    - name: task.reciprocal_training
+#      type: choice
+#      values: [true, false]
+#      value_type: bool
 
     # phase2
 #    - name: model.embedding.global.init
 #      type: choice
 #      values: ['xavier_uniform', 'xavier_normal']
 #      value_type: str
-    - name: train.regularizer.n3.weight
+    - name: train.regularizer.entity_reg.type
       type: choice
-      values: [0.01, 0.1, 0.001]
+      values: ['f2_regularize', 'lambda3_regularize']
+      value_type: str
+    - name: train.regularizer.entity_reg.weight
+      type: range
+      bounds: [0.0, 0.1]
       value_type: float
-    - name: train.regularizer.lambda3.weight
+    - name: train.regularizer.relation_reg.type
       type: choice
-      values: [0.1, 1, 0.5]
+      values: ['f2_regularize', 'lambda3_regularize']
+      value_type: str
+    - name: train.regularizer.relation_reg.weight
+      type: range
+      bounds: [0.0, 0.1]
       value_type: float
 
 

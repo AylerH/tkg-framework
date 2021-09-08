@@ -6,10 +6,10 @@ console:
 
 #local
 task:
-  folder: /home/ubuntu/gengyuan/search_experiments
+  folder: /home/ubuntu/zitao/search_experiments
   type: train
   device: 'cuda'
-  reciprocal_training: true
+  reciprocal_training: True
 
 random_seed:
   default: -1
@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_m10
+  folder: /home/ubuntu/zitao/tkg-framework/data/wiki
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -29,11 +29,11 @@ dataset:
   filter: False
   temporal:
     resolution: "day"
-    index: False
-    float: True
+    index: True
+    float: False
   args: ~
 
-  name: 'gdelt-m10'
+  name: 'wiki'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,62 +48,37 @@ negative_sampling:
 
 
 model:
-  type: de_pipeline_dropout_model
-
-  p: 0.4
+  type: utee_pipeline_dropout_model
 
   embedding:
     global:
-      dim: 160
+      dim: 128
       init: xavier_uniform
-
+      t_min: 1
+      t_max: 365
     entity:
       pos_aware: True
       keys:
-        ent_embs:
-          dim: 108
+        real:
+          dim: 128
           init: xavier_uniform
-        amps_y:
-          dim: 52
-          init: xavier_uniform
-        amps_m:
-          dim: 52
-          init: xavier_uniform
-        amps_d:
-          dim: 52
-          init: xavier_uniform
-        freq_y:
-          dim: 52
-          init: xavier_uniform
-        freq_m:
-          dim: 52
-          init: xavier_uniform
-        freq_d:
-          dim: 52
-          init: xavier_uniform
-        phi_y:
-          dim: 52
-          init: xavier_uniform
-        phi_m:
-          dim: 52
-          init: xavier_uniform
-        phi_d:
-          dim: 52
-          init: xavier_uniform
+
     relation:
       keys:
         real:
-          dim: 160
+          dim: 128
           init: xavier_uniform
-    temporal: ~
+    temporal:
+      keys:
+        real:
+          dim: 1600 # should have no effect
+          init: xavier_uniform
   fusion:
-    type: diachronic_entity_fusion
+    type: concatenate_fusion
     target:
       - 'ent+temp'
-    l1_flag: True
-    p: 0.4
-    emb_dim: 160
-    se: 0.32
+    p: 0.0
+    se: 0.6
     args: ~
   transformation:
     type: distmult_tf
@@ -117,14 +92,13 @@ model:
   args: ~
 
 
-
 train:
   # Split used for training (specified under 'data.files').
   split: train
   type: negative_sampling
 
   loss:
-    type: cross_entropy_loss
+    type: binary_cross_entropy_loss
     args: ~
 
   max_epochs: 100
@@ -139,7 +113,7 @@ train:
   valid:
     split: test # in [test or valid]
     every: 5
-    batch_size: 64
+    batch_size: 512
     subbatch_size: -1
     filter: time-aware  # in [off, static, time-aware]
     ordering: optimistic    # in [optimistic, peesimistic]
@@ -149,21 +123,16 @@ train:
       early_stop: True
       patience: 30
       epochs: 50
-      metric_thresh: 0.1
+      metric_thresh: 0.15
 
   batch_size: 512
-  subbatch_size: 64
+  subbatch_size: -1
   subbatch_adaptive: True
   optimizer:
     type: Adam
     args:
       lr: 0.001
 
-    default:
-      type: Adam           # sgd, adagrad, adam
-
-      args:
-        +++: +++
 
   regularizer:
     entity_reg:
@@ -174,10 +143,6 @@ train:
       type: none_regularize
       weight: 0.0
       args: ~
-#    temporal_reg:
-#      type: no_regularize
-#      weight: 0.01
-#      args: ~
   inplace_regularizer: ~
 
   lr_scheduler: ""
@@ -188,7 +153,7 @@ train:
   trace_level: epoch           # batch, epoch
 
   checkpoint:
-    every: 50
+    every: 100
     keep: 3
 
   auto_correct: False
@@ -209,35 +174,15 @@ hpo:
   hyperparam:
     - name: model.embedding.global.dim
       type: choice
-      values: [256, 100]
+      values: [512, 256, 128]
       value_type: int
-#    - name: train.batch_size
-#      type: choice
-#      values: [256, 512, 1024]
-#      value_type: int
-    - name: train.optimizer.args.lr
-      type: range
-      bounds: [0.000001, 0.01]
-      value_type: float
-    - name: model.fusion.se
-      type: range
-      bounds: [0.0, 1.0]
-      value_type: float
     - name: model.embedding.global.init
       type: choice
       values: ['xavier_uniform', 'xavier_normal']
       value_type: str
-#    - name: task.reciprocal_training
-#      type: choice
-#      values: [true, false]
-#      value_type: bool
-    - name: train.loss.type
-      type: choice
-      values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
-      value_type: str
-    - name: model.fusion.p
-      type: choice
-      values: [0.2, 0.4, 0.6]
+    - name: model.fusion.se
+      type: range
+      bounds: [0.4, 1.0]
       value_type: float
     - name: train.regularizer.entity_reg.type
       type: choice
@@ -255,11 +200,15 @@ hpo:
       type: range
       bounds: [0.0, 0.1]
       value_type: float
-#    - name: train.regularizer.temporal_reg.weight
-#      type: range
-#      bounds: [0.0, 0.1]
-#      value_type: float
-
-
-
-
+    - name: train.optimizer.args.lr
+      type: range
+      bounds: [0.000001, 0.01]
+      value_type: float
+    - name: model.fusion.p
+      type: choice
+      values: [0.2, 0.4, 0.6]
+      value_type: float
+    - name: train.loss.type
+      type: choice
+      values: ['binary_cross_entropy_loss', 'cross_entropy_loss']
+      value_type: str
