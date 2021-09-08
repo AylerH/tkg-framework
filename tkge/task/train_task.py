@@ -174,11 +174,11 @@ class TrainTask(Task):
             train_size = self.dataset.train_size
 
             start_time = time.time()
-
+            batch_id = 0
             # processing batches
             for pos_batch in self.train_loader:
                 done = False
-
+                batch_id += 1
                 while not done:
                     try:
                         self.optimizer.zero_grad()
@@ -193,13 +193,13 @@ class TrainTask(Task):
                             stop = min(start + self.train_sub_bs, bs)
                             pos_subbatch = pos_batch[start:stop]
                             subbatch_loss, subbatch_factors = self._subbatch_forward(pos_subbatch)
+                            subbatch_loss.backward()
+                            batch_loss += subbatch_loss.cpu().item()
 
-                            batch_loss += subbatch_loss
-
-                        batch_loss.backward()
+                        # batch_loss.backward()
                         self.optimizer.step()
 
-                        total_epoch_loss += batch_loss.cpu().item()
+                        total_epoch_loss += batch_loss
 
                         if subbatch_factors:
                             for name, tensors in subbatch_factors.items():

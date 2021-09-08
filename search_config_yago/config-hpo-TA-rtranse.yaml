@@ -6,7 +6,7 @@ console:
 
 #local
 task:
-  folder: /home/ubuntu/gengyuan/search_experiments
+  folder: /home/ubuntu/zitao/search_experiments
   type: train
   device: 'cuda'
   reciprocal_training: true
@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_m10
+  folder: /home/ubuntu/zitao/tkg-framework/data/yago11k
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: True
   args: ~
 
-  name: 'gdelt-m10_TA'
+  name: 'yago11k'
   num_entities: -1
   num_relations: -1
   pickle: True
@@ -48,7 +48,7 @@ negative_sampling:
 
 
 model:
-  type: ta_distmult
+  type: ta_transe
 
   emb_dim: 64
   l1_flag: True
@@ -105,13 +105,19 @@ train:
         +++: +++
 
   regularizer: ~
-  inplace_regularizer:
-    norm:
-      type: inplace_renorm_regularize
-      p: 2
-      dim: 1
-      maxnorm: 1
-      args: ~
+#    entity_reg:
+#      type: none_regularize
+#      weight: 0.0
+#      args: ~
+#    relation_reg:
+#      type: none_regularize
+#      weight: 0.0
+#      args: ~
+#    temporal_reg:
+#      type: n3_regularize
+#      weight: 0.0
+#      args: ~
+  inplace_regularizer: ~
 
   lr_scheduler: ""
 
@@ -137,12 +143,12 @@ eval:
 
 hpo:
   num_workers: -1
-  num_trials: 20
-  num_random_trials: 14
+  num_trials: 60
+  num_random_trials: 20
   hyperparam:
     - name: model.emb_dim
       type: choice
-      values: [128, 64]
+      values: [128, 100, 64]
       value_type: int
 #    - name: train.regularizer.temporal_reg.weight
 #      type: range

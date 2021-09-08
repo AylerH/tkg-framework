@@ -6,7 +6,7 @@ console:
 
 #local
 task:
-  folder: /home/ubuntu/gengyuan/search_experiments
+  folder: /home/ubuntu/zitao/search_experiments
   type: train
   device: 'cuda'
   reciprocal_training: true
@@ -21,7 +21,7 @@ random_seed:
 
 # local
 dataset:
-  folder: /home/ubuntu/gengyuan/tkg-framework/data/gdelt_m10
+  folder: /home/ubuntu/zitao/tkg-framework/data/yago11k
 
   # indexes mapping [false, true]
   # TODO 可以保存到cache
@@ -33,7 +33,7 @@ dataset:
     float: True
   args: ~
 
-  name: 'gdelt-m10_TA'
+  name: 'yago11k'
   num_entities: -1
   num_relations: -1
   pickle: True
