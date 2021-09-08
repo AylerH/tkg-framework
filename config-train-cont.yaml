@@ -103,7 +103,7 @@ train:
 
   regularizer:
     L2:
-      type: f2_regularizer
+      type: f2_regularize
       weight: 0.08
       args: ~
   inplace_regularizer: ~

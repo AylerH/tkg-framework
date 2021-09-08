@@ -523,7 +523,6 @@ class ATiSEModel(BaseModel):
         self.embedding['emb_TE'].weight.data.renorm_(p=2, dim=0, maxnorm=1)
         self.embedding['emb_TR'].weight.data.renorm_(p=2, dim=0, maxnorm=1)
 
-
     @forward_checking
     def forward(self, sample: torch.Tensor):
         # bs = sample.size(0)
@@ -883,6 +882,7 @@ class TTransEModel(BaseModel):
 
         return scores
 
+
 @BaseModel.register(name="tcomplex_tango")
 class TComplExTangoModel(BaseModel):
     def __init__(self, config: Config, dataset: DatasetProcessor, **kwargs):
@@ -916,7 +916,6 @@ class TComplExTangoModel(BaseModel):
         rel = self.embeddings[1](x[:, 1].long())
         rhs = self.embeddings[0](x[:, 2].long())
         time = self.embeddings[2](x[:, 3].long())
-
 
         lhs = lhs[:, :self.rank], lhs[:, self.rank:]
         rel = rel[:, :self.rank], rel[:, self.rank:]
@@ -1113,6 +1112,7 @@ class TNTComplExTangoModel(BaseModel):
 
         return scores
 
+
 @BaseModel.register(name="ConT")
 class ConTModel(BaseModel):
     def __init__(self, config: Config, dataset: DatasetProcessor, **kwargs):
@@ -1130,10 +1130,10 @@ class ConTModel(BaseModel):
 
         self.embedding: Dict[str, torch.nn.Embedding] = defaultdict(None)
         self.embedding['ent_head'] = torch.nn.Embedding(num_ent, self.emb_dim)
-        self.embedding['ent_tail']  =torch.nn.Embedding(num_ent, self.emb_dim)
+        self.embedding['ent_tail'] = torch.nn.Embedding(num_ent, self.emb_dim)
         self.embedding['rel'] = torch.nn.Embedding(num_rel, self.emb_dim)
 
-        self.g = nn.Parameter(torch.zeros(num_ent, num_rel, num_ent, num_tem), requires_grad=True)
+        self.g = nn.Parameter(torch.zeros(num_tem, self.emb_dim, self.emb_dim, self.emb_dim), requires_grad=True)
 
         self.embedding = nn.ModuleDict(self.embedding)
 
@@ -1141,24 +1141,21 @@ class ConTModel(BaseModel):
             torch.nn.init.xavier_uniform_(emb.weight)
             emb.weight.data.renorm(p=2, dim=1, maxnorm=1)
 
-        torch.nn.init.xavier_uniform_(self.g.weight)
+        torch.nn.init.xavier_uniform_(self.g.data)
 
     @forward_checking
     def forward(self, samples, **kwargs):
         h, r, t, tem = samples[:, 0].long(), samples[:, 1].long(), samples[:, 2].long(), samples[:, 3].long()
 
-
-
-
         h_e = self.embedding['ent_head'](h)  # 1d vector
         t_e = self.embedding['ent_tail'](t)  # 1d vector
         r_e = self.embedding['rel'](r)  # 1d vector
 
-        g_t = self.g[:, tem]  # 3D tensor
+        g_t = self.g[tem, ...]  # 3D tensor
 
-        scores = torch.sum(torch.matmul(g_t, h_e), dim=0)   # 2D
-        scores = torch.sum(torch.matmul(scores, r_e), dim=0) # 1D
-        scores = torch.sum(scores, g_t, dim=0)
+        scores = torch.sum(g_t * h_e.view(-1, self.emb_dim, 1, 1), dim=1)  # 2D
+        scores = torch.sum(scores * r_e.view(-1, self.emb_dim, 1), dim=1)  # 1D
+        scores = torch.sum(scores * t_e.view(-1, self.emb_dim), dim=1)
 
         factors = {
             "L2": (h_e,
