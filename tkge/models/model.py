@@ -1112,3 +1112,83 @@ class TNTComplExTangoModel(BaseModel):
                  (lhs[1] * full_rel[0] + lhs[0] * full_rel[1]) @ right[1].t()
 
         return scores
+
+@BaseModel.register(name="ConT")
+class ConTModel(BaseModel):
+    def __init__(self, config: Config, dataset: DatasetProcessor, **kwargs):
+        super().__init__(config, dataset)
+
+        # model params from files
+        self.emb_dim = self.config.get("model.emb_dim")
+
+        self.prepare_embedding()
+
+    def prepare_embedding(self):
+        num_ent = self.dataset.num_entities()
+        num_rel = self.dataset.num_relations()
+        num_tem = self.dataset.num_timestamps()
+
+        self.embedding: Dict[str, torch.nn.Embedding] = defaultdict(None)
+        self.embedding['ent_head'] = torch.nn.Embedding(num_ent, self.emb_dim)
+        self.embedding['ent_tail']  =torch.nn.Embedding(num_ent, self.emb_dim)
+        self.embedding['rel'] = torch.nn.Embedding(num_rel, self.emb_dim)
+
+        self.g = nn.Parameter(torch.zeros(num_ent, num_rel, num_ent, num_tem), requires_grad=True)
+
+        self.embedding = nn.ModuleDict(self.embedding)
+
+        for _, emb in self.embedding.items():
+            torch.nn.init.xavier_uniform_(emb.weight)
+            emb.weight.data.renorm(p=2, dim=1, maxnorm=1)
+
+        torch.nn.init.xavier_uniform_(self.g.weight)
+
+    @forward_checking
+    def forward(self, samples, **kwargs):
+        h, r, t, tem = samples[:, 0].long(), samples[:, 1].long(), samples[:, 2].long(), samples[:, 3].long()
+
+
+
+
+        h_e = self.embedding['ent_head'](h)  # 1d vector
+        t_e = self.embedding['ent_tail'](t)  # 1d vector
+        r_e = self.embedding['rel'](r)  # 1d vector
+
+        g_t = self.g[:, tem]  # 3D tensor
+
+        scores = torch.sum(torch.matmul(g_t, h_e), dim=0)   # 2D
+        scores = torch.sum(torch.matmul(scores, r_e), dim=0) # 1D
+        scores = torch.sum(scores, g_t, dim=0)
+
+        factors = {
+            "L2": (h_e,
+                   t_e,
+                   r_e,
+                   g_t)
+        }
+
+        return scores, factors
+
+    def fit(self, samples: torch.Tensor):
+        bs = samples.size(0)
+        dim = samples.size(1) // (1 + self.config.get("negative_sampling.num_samples"))
+
+        samples = samples.view(-1, dim)
+
+        scores, factor = self.forward(samples)
+        scores = scores.view(bs, -1)
+
+        return scores, factor
+
+    def predict(self, queries: torch.Tensor):
+        self.config.assert_true(torch.isnan(queries).sum(1).byte().all(), "Either head or tail should be absent.")
+
+        bs = queries.size(0)
+        dim = queries.size(0)
+
+        candidates = all_candidates_of_ent_queries(queries, self.dataset.num_entities())
+
+        scores, _ = self.forward(candidates)
+        scores = scores.view(bs, -1)
+
+        return scores

@@ -33,7 +33,7 @@ dataset:
     float: True
   args: ~
 
-  name: 'icews14_TA'
+  name: 'icews14_TA' #gdeltm10_TA (gdeltm10+icews14_TA)
   num_entities: -1
   num_relations: -1
   pickle: True
